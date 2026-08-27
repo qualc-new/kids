@@ -70,8 +70,8 @@
     }
     .op { font-size: 28px; font-weight: 700; color: var(--muted); }
     .dot {
-      width: 48px;
-      height: 30px;
+      width: 40px;
+      height: 26px;
       border-radius: 0;
       background: transparent;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 40'%3E%3Crect x='6' y='16' width='52' height='14' rx='5' fill='%23ff7a1a'/%3E%3Cpath d='M14 16l7-9h20l9 9z' fill='%23ff7a1a'/%3E%3Ccircle cx='20' cy='31' r='5.5' fill='%232c3e50'/%3E%3Ccircle cx='44' cy='31' r='5.5' fill='%232c3e50'/%3E%3Crect x='22' y='9' width='10' height='7' rx='1.5' fill='%23dbeafe'/%3E%3Crect x='34' y='9' width='10' height='7' rx='1.5' fill='%23dbeafe'/%3E%3C/svg%3E");
@@ -84,6 +84,46 @@
       background-size: contain;
       background-repeat: no-repeat;
     }
+    .nums.many .num {
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+      border-radius: 14px;
+    }
+    .custom-box {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .custom-box.show { display: flex; }
+    .custom-box label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .custom-box input {
+      width: 88px;
+      height: 40px;
+      border: 3px solid var(--line);
+      border-radius: 12px;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--ink);
+      background: #fff;
+    }
+    .custom-box input:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+    .eq.compact .dot {
+      width: 28px;
+      height: 18px;
+    }
+    .eq.compact .group { gap: 4px; padding: 6px; }
     .nums { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
     .num {
       width: 72px;
@@ -168,9 +208,11 @@
     <h1>凑一凑</h1>
     <div class="road-line" aria-hidden="true"></div>
     <p class="lead">两队小汽车合在一起一共几辆？先数一数，再点答案。</p>
-    <div class="row">
-      <button type="button" class="chip active" id="easy">3 岁 · 合计到3</button>
-      <button type="button" class="chip" id="hard">4～5 岁 · 合计到5</button>
+    <div class="row" id="levels"></div>
+    <div class="custom-box" id="customBox">
+      <label for="customSum">合计到</label>
+      <input id="customSum" type="number" min="2" max="30" value="12" inputmode="numeric" />
+      <button type="button" class="chip" id="customApply">确定</button>
     </div>
     <div class="stats">
       <div class="stat"><b id="q">1</b><span>第几题</span></div>
@@ -185,15 +227,65 @@
   </div>
   <script>
     (function () {
-      const WORDS = ["", "一", "两", "三", "四", "五"];
-      const state = { maxSum: 3, a: 1, b: 1, correct: 0, q: 1, lock: false };
+      /** 合值上限配置 */
+      const SUM_LEVELS = [
+        { id: "lv10", label: "3 岁 · 合计到 10", maxSum: 10 },
+        { id: "lv20", label: "4～5 岁 · 合计到 20", maxSum: 20 },
+        { id: "custom", label: "进阶 · 自定义", custom: true },
+      ];
+      const DEFAULT_LEVEL = "lv10";
+      const CUSTOM_MIN = 2;
+      const CUSTOM_MAX = 30;
+      const WORDS = ["", "一", "两", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+      const state = {
+        maxSum: 10,
+        levelId: DEFAULT_LEVEL,
+        customSum: 12,
+        a: 1,
+        b: 1,
+        correct: 0,
+        q: 1,
+        lock: false,
+      };
 
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function clampSum(n) {
+        const v = Math.floor(Number(n));
+        if (!isFinite(v)) return CUSTOM_MIN;
+        return Math.max(CUSTOM_MIN, Math.min(CUSTOM_MAX, v));
+      }
+      function wordOf(n) {
+        return WORDS[n] || String(n);
+      }
       function dots(n, cls) {
         let html = '<div class="group">';
         for (let i = 0; i < n; i++) html += '<div class="dot' + (cls || "") + '"></div>';
         html += "</div>";
         return html;
+      }
+      function syncCustomBox() {
+        const box = document.getElementById("customBox");
+        const show = state.levelId === "custom";
+        box.classList.toggle("show", show);
+        if (show) document.getElementById("customSum").value = String(state.customSum);
+      }
+      function setLevel(levelId, customValue) {
+        const level = SUM_LEVELS.find(function (item) { return item.id === levelId; }) || SUM_LEVELS[0];
+        state.levelId = level.id;
+        if (level.custom) {
+          if (customValue != null) state.customSum = clampSum(customValue);
+          state.maxSum = state.customSum;
+        } else {
+          state.maxSum = level.maxSum;
+        }
+        state.correct = 0;
+        state.q = 1;
+        document.querySelectorAll("#levels .chip").forEach(function (el) {
+          el.classList.toggle("active", el.dataset.id === level.id);
+        });
+        syncCustomBox();
+        nextQ();
       }
       function nextQ() {
         state.lock = false;
@@ -202,7 +294,9 @@
           state.b = rand(1, state.maxSum - state.a);
         } while (state.a + state.b < 2);
         const sum = state.a + state.b;
-        document.getElementById("eq").innerHTML =
+        const eq = document.getElementById("eq");
+        eq.className = "eq" + (state.maxSum >= 12 ? " compact" : "");
+        eq.innerHTML =
           dots(state.a, "") +
           '<span class="op">+</span>' +
           dots(state.b, " blue") +
@@ -210,22 +304,19 @@
           '<span class="op">?</span>';
         const box = document.getElementById("nums");
         box.innerHTML = "";
-        const opts = [];
-        for (let i = 1; i <= state.maxSum; i++) opts.push(i);
-        if (opts.indexOf(sum) < 0) opts.push(sum);
-        opts.sort(function (x, y) { return x - y; });
-        opts.forEach(function (i) {
+        box.className = "nums" + (state.maxSum >= 8 ? " many" : "");
+        for (let i = 1; i <= state.maxSum; i++) {
           const b = document.createElement("button");
           b.type = "button";
           b.className = "num";
           b.textContent = String(i);
           b.onclick = function () { pick(i, b, sum); };
           box.appendChild(b);
-        });
+        }
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
         document.getElementById("status").textContent =
-          "橙色车 " + state.a + " 辆，蓝色车 " + state.b + " 辆，合起来几辆？";
+          "橙色车 " + state.a + " 辆，蓝色车 " + state.b + " 辆，合起来几辆？（合计不超过 " + state.maxSum + "）";
       }
       function pick(i, btn, sum) {
         if (state.lock) return;
@@ -235,7 +326,7 @@
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
           document.getElementById("status").textContent =
-            "对了！" + state.a + " + " + state.b + " = " + sum + "（一共" + WORDS[sum] + "辆）";
+            "对了！" + state.a + " + " + state.b + " = " + sum + "（一共" + wordOf(sum) + "辆）";
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) { state.correct = 0; state.q = 1; }
@@ -243,23 +334,28 @@
           }, 1000);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再数一遍：一个一个点着数。";
+          document.getElementById("status").textContent = "再数一遍：一辆一辆点着数。";
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }
-      document.getElementById("easy").onclick = function () {
-        state.maxSum = 3; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("hard").classList.remove("active");
-        nextQ();
+
+      const levelRow = document.getElementById("levels");
+      SUM_LEVELS.forEach(function (level) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.dataset.id = level.id;
+        btn.textContent = level.label;
+        btn.onclick = function () { setLevel(level.id); };
+        levelRow.appendChild(btn);
+      });
+      document.getElementById("customApply").onclick = function () {
+        setLevel("custom", document.getElementById("customSum").value);
       };
-      document.getElementById("hard").onclick = function () {
-        state.maxSum = 5; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("easy").classList.remove("active");
-        nextQ();
-      };
-      nextQ();
+      document.getElementById("customSum").addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") setLevel("custom", ev.currentTarget.value);
+      });
+      setLevel(DEFAULT_LEVEL);
     })();
   </script>
 </body>

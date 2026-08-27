@@ -28,7 +28,7 @@ python -m http.server 8080
 | [分一分](sort.html) | `sort.html` | 按颜色把小汽车开进车库 |
 | [排排队](order.html) | `order.html` | 车队号码从小到大排序 |
 | [找规律](pattern.html) | `pattern.html` | 看车队颜色规律，选出下一辆 |
-| [凑一凑](add.html) | `add.html` | 两队车合起来，初步加法 |
+| [凑一凑](add.html) | `add.html` | 两队车合起来；10 / 20 / 自定义合值 |
 
 ## 6 岁以上 · 观察与运算
 
