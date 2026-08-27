@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>找房子：观察与匹配</title>
+  <style>
+    :root {
+      --bg: #fff4e5;
+      --paper: #fffaf3;
+      --ink: #3a2a1a;
+      --muted: #7a6454;
+      --line: #ead7c2;
+      --red: #e24b4a;
+      --ok: #2f8a56;
+      --warn: #c56a16;
+      --btn: #e24b4a;
+      --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; }
+    .lead { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active, button.primary {
+      background: var(--btn);
+      border-color: var(--btn);
+      color: var(--btn-ink);
+    }
+    button.ghost { background: transparent; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .stats { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 560px;
+      touch-action: none;
+      cursor: default;
+    }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+    }
+    .status {
+      margin: 0;
+      flex: 1;
+      min-width: 200px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .formula {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #eef8f1;
+      color: var(--ok);
+      font-size: 16px;
+    }
+    .formula.show { display: block; }
+    .formula.warn { background: #fff4e0; color: var(--warn); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>找房子：观察与匹配</h1>
+    <p class="lead">左边是小动物想住的房子。从动物拖一条线到右边对应的房子上，也可以先点动物再点房子。</p>
+
+    <div class="row" id="levels"></div>
+    <div class="stats">
+      <div class="stat"><b id="statLevel">1</b><span>关卡</span></div>
+      <div class="stat"><b id="statLinked">0/4</b><span>已连线</span></div>
+      <div class="stat"><b id="statRight">?</b><span>答对</span></div>
+    </div>
+
+    <div class="stage-card">
+      <canvas id="stage" width="980" height="560"></canvas>
+      <div class="bar">
+        <button type="button" class="primary" id="btnCheck">检查</button>
+        <button type="button" class="ghost" id="btnReset">再连一次</button>
+        <button type="button" class="ghost" id="btnNext">下一关</button>
+        <p class="status" id="status">从左边的小动物拖一条线，连到它要住的房子。</p>
+      </div>
+    </div>
+    <div class="formula" id="formula"></div>
+  </div>
+
+  <script>
+    (function () {
+      const LEVELS = [
+        {
+          title: "第 1 关：看房顶和窗户",
+          hint: "先看房顶颜色，再看窗户颜色。",
+          animals: [
+            { id: "rabbit", name: "小兔", kind: "rabbit", text: "红色房顶，黄色窗户" },
+            { id: "cat", name: "小猫", kind: "cat", text: "蓝色房顶，绿色窗户" },
+            { id: "dog", name: "小狗", kind: "dog", text: "绿色房顶，圆形门" },
+            { id: "bear", name: "小熊", kind: "bear", text: "黄色房顶，蓝色窗户" },
+          ],
+          houses: [
+            { id: "h1", roof: "#e24b4a", wall: "#fff6e8", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h2", roof: "#3b7ec9", wall: "#fff6e8", window: "#3d9a5f", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+            { id: "h3", roof: "#3d9a5f", wall: "#fff6e8", window: "#f0c230", door: "#c45c2a", doorShape: "round", chimney: false, windows: 2 },
+            { id: "h4", roof: "#e0b125", wall: "#fff6e8", window: "#4a8fd4", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+          ],
+          answer: { rabbit: "h1", cat: "h2", dog: "h3", bear: "h4" },
+        },
+        {
+          title: "第 2 关：还要看烟囱",
+          hint: "有两栋红顶房子，再看窗户数量和烟囱。",
+          animals: [
+            { id: "rabbit", name: "小兔", kind: "rabbit", text: "红色房顶，两扇窗，有烟囱" },
+            { id: "cat", name: "小猫", kind: "cat", text: "红色房顶，一扇窗，没有烟囱" },
+            { id: "dog", name: "小狗", kind: "dog", text: "蓝色房顶，两扇窗，没有烟囱" },
+            { id: "bear", name: "小熊", kind: "bear", text: "蓝色房顶，一扇窗，有烟囱" },
+          ],
+          houses: [
+            { id: "h1", roof: "#e24b4a", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h2", roof: "#e24b4a", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 1 },
+            { id: "h3", roof: "#3b7ec9", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+            { id: "h4", roof: "#3b7ec9", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 1 },
+          ],
+          answer: { rabbit: "h1", cat: "h2", dog: "h3", bear: "h4" },
+        },
+        {
+          title: "第 3 关：墙、顶、窗都要看",
+          hint: "有的房子很像，把三个特征都对上才行。",
+          animals: [
+            { id: "rabbit", name: "小兔", kind: "rabbit", text: "白墙，红色房顶，黄色窗户" },
+            { id: "cat", name: "小猫", kind: "cat", text: "粉墙，红色房顶，黄色窗户" },
+            { id: "dog", name: "小狗", kind: "dog", text: "白墙，蓝色房顶，黄色窗户" },
+            { id: "bear", name: "小熊", kind: "bear", text: "白墙，红色房顶，蓝色窗户" },
+          ],
+          houses: [
+            { id: "h1", roof: "#e24b4a", wall: "#fffaf3", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h2", roof: "#e24b4a", wall: "#f4c4c0", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h3", roof: "#3b7ec9", wall: "#fffaf3", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+            { id: "h4", roof: "#e24b4a", wall: "#fffaf3", window: "#4a8fd4", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+          ],
+          answer: { rabbit: "h1", cat: "h2", dog: "h3", bear: "h4" },
+        },
+      ];
+
+      const canvas = document.getElementById("stage");
+      const ctx = canvas.getContext("2d");
+      const statusEl = document.getElementById("status");
+      const formulaEl = document.getElementById("formula");
+
+      const state = {
+        level: 0,
+        houseOrder: [],
+        links: {},
+        selected: null,
+        drag: null,
+        checked: false,
+        results: {},
+        status: "",
+      };
+      let cssW = 980;
+      let cssH = 560;
+      let layoutCache = null;
+
+      function level() { return LEVELS[state.level]; }
+      function shuffle(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+        return a;
+      }
+      function linkedCount() {
+        return Object.keys(state.links).filter(function (k) { return state.links[k]; }).length;
+      }
+      function houseOf(id) {
+        return level().houses.find(function (h) { return h.id === id; });
+      }
+
+      function resetRound(keepOrder) {
+        const lv = level();
+        state.links = {};
+        state.selected = null;
+        state.drag = null;
+        state.checked = false;
+        state.results = {};
+        if (!keepOrder) state.houseOrder = shuffle(lv.houses.map(function (h) { return h.id; }));
+        state.status = lv.hint + " 从动物拖线到房子。";
+        render();
+      }
+
+      function layout() {
+        const lv = level();
+        const pad = 18;
+        const leftW = Math.min(320, cssW * 0.38);
+        const rightW = 150;
+        const leftX = pad;
+        const rightX = cssW - pad - rightW;
+        const top = 54;
+        const gap = (cssH - top - pad) / 4;
+        const animals = lv.animals.map(function (a, i) {
+          const y = top + i * gap;
+          return {
+            id: a.id,
+            x: leftX,
+            y: y,
+            w: leftW,
+            h: gap - 12,
+            port: { x: leftX + leftW, y: y + (gap - 12) / 2 },
+            data: a,
+          };
+        });
+        const houses = state.houseOrder.map(function (hid, i) {
+          const y = top + i * gap;
+          return {
+            id: hid,
+            x: rightX,
+            y: y,
+            w: rightW,
+            h: gap - 12,
+            port: { x: rightX, y: y + (gap - 12) / 2 },
+            data: houseOf(hid),
+          };
+        });
+        layoutCache = { animals: animals, houses: houses, top: top };
+        return layoutCache;
+      }
+
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else {
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+      }
+
+      function drawAnimalFace(kind, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (kind === "rabbit") {
+          ctx.fillStyle = "#f3d2b3";
+          ctx.beginPath(); ctx.ellipse(-8, -22, 5, 14, -0.15, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(8, -22, 5, 14, 0.15, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#f7c0c8";
+          ctx.beginPath(); ctx.ellipse(-8, -22, 2.2, 8, -0.15, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(8, -22, 2.2, 8, 0.15, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#f3d2b3";
+          ctx.beginPath(); ctx.arc(0, -4, 14, 0, Math.PI * 2); ctx.fill();
+        } else if (kind === "cat") {
+          ctx.fillStyle = "#e8b56a";
+          ctx.beginPath();
+          ctx.moveTo(-16, -8); ctx.lineTo(-10, -26); ctx.lineTo(-2, -10);
+          ctx.moveTo(16, -8); ctx.lineTo(10, -26); ctx.lineTo(2, -10);
+          ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -2, 14, 0, Math.PI * 2); ctx.fill();
+        } else if (kind === "dog") {
+          ctx.fillStyle = "#c9956a";
+          ctx.beginPath(); ctx.ellipse(-16, 2, 7, 10, 0.4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(16, 2, 7, 10, -0.4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -2, 14, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.fillStyle = "#c9a06a";
+          ctx.beginPath(); ctx.arc(-11, -14, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(11, -14, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -2, 15, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = "#3a2a1a";
+        ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#3a2a1a";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(0, 2, 4, 0.15, Math.PI - 0.15); ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawHouse(h, box) {
+        const x = box.x + box.w / 2;
+        const baseY = box.y + box.h - 10;
+        const wallW = 78;
+        const wallH = 48;
+        const wallX = x - wallW / 2;
+        const wallY = baseY - wallH;
+        ctx.fillStyle = "#d8c3a6";
+        ctx.fillRect(wallX + 8, baseY - 4, wallW - 16, 6);
+        if (h.chimney) {
+          ctx.fillStyle = "#b07058";
+          ctx.fillRect(x + 18, wallY - 28, 12, 26);
+        }
+        ctx.fillStyle = h.roof;
+        ctx.beginPath();
+        ctx.moveTo(x, wallY - 28);
+        ctx.lineTo(x + wallW / 2 + 10, wallY + 4);
+        ctx.lineTo(x - wallW / 2 - 10, wallY + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = h.wall;
+        ctx.fillRect(wallX, wallY, wallW, wallH);
+        ctx.strokeStyle = "rgba(58,42,26,0.18)";
+        ctx.strokeRect(wallX, wallY, wallW, wallH);
+        ctx.fillStyle = h.window;
+        if (h.windows === 1) {
+          ctx.fillRect(x - 11, wallY + 10, 22, 16);
+          ctx.strokeStyle = "#fffaf3";
+          ctx.strokeRect(x - 11, wallY + 10, 22, 16);
+          ctx.beginPath(); ctx.moveTo(x, wallY + 10); ctx.lineTo(x, wallY + 26); ctx.stroke();
+        } else {
+          ctx.fillRect(wallX + 10, wallY + 10, 18, 16);
+          ctx.fillRect(x + 3, wallY + 10, 18, 16);
+        }
+        ctx.fillStyle = h.door;
+        if (h.doorShape === "round") {
+          ctx.beginPath();
+          ctx.moveTo(x - 9, baseY);
+          ctx.lineTo(x - 9, wallY + 26);
+          ctx.arc(x, wallY + 26, 9, Math.PI, 0);
+          ctx.lineTo(x + 9, baseY);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(x - 9, wallY + 22, 18, wallH - 22);
+        }
+      }
+
+      function drawLink(from, to, color, width) {
+        const mx = (from.x + to.x) / 2;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.bezierCurveTo(mx, from.y, mx, to.y, to.x, to.y);
+        ctx.stroke();
+      }
+
+      function linkColor(animalId) {
+        if (!state.checked) return "#c56a16";
+        return state.results[animalId] ? "#2f8a56" : "#e24b4a";
+      }
+
+      function render() {
+        const lv = level();
+        const lay = layout();
+        ctx.clearRect(0, 0, cssW, cssH);
+        ctx.fillStyle = "#fffaf3";
+        ctx.fillRect(0, 0, cssW, cssH);
+
+        ctx.fillStyle = "#3a2a1a";
+        ctx.font = "bold 16px Microsoft YaHei, sans-serif";
+        ctx.fillText(lv.title, 20, 30);
+        ctx.fillStyle = "#7a6454";
+        ctx.font = "13px Microsoft YaHei, sans-serif";
+        ctx.fillText("小动物的家", 20, 48);
+        ctx.textAlign = "right";
+        ctx.fillText("四栋房子", cssW - 20, 48);
+        ctx.textAlign = "left";
+
+        Object.keys(state.links).forEach(function (aid) {
+          if (state.drag && state.drag.id === aid) return;
+          const hid = state.links[aid];
+          if (!hid) return;
+          const a = lay.animals.find(function (x) { return x.id === aid; });
+          const h = lay.houses.find(function (x) { return x.id === hid; });
+          if (a && h) drawLink(a.port, h.port, linkColor(aid), 4);
+        });
+        if (state.drag) {
+          const a = lay.animals.find(function (x) { return x.id === state.drag.id; });
+          if (a) drawLink(a.port, { x: state.drag.x, y: state.drag.y }, "#e24b4a", 4);
+        }
+
+        lay.animals.forEach(function (box) {
+          const on = state.selected === box.id || (state.drag && state.drag.id === box.id);
+          const ok = state.checked && state.results[box.id] === true;
+          const bad = state.checked && state.results[box.id] === false;
+          ctx.fillStyle = on ? "#fff1e0" : "#fbf3e8";
+          roundRect(box.x, box.y, box.w, box.h, 12);
+          ctx.fill();
+          ctx.strokeStyle = bad ? "#e24b4a" : ok ? "#2f8a56" : on ? "#e24b4a" : "#ead7c2";
+          ctx.lineWidth = on || bad || ok ? 2 : 1;
+          roundRect(box.x, box.y, box.w, box.h, 12);
+          ctx.stroke();
+          drawAnimalFace(box.data.kind, box.x + 36, box.y + box.h / 2 + 4);
+          ctx.fillStyle = "#3a2a1a";
+          ctx.font = "bold 15px Microsoft YaHei, sans-serif";
+          ctx.fillText(box.data.name, box.x + 62, box.y + 28);
+          ctx.fillStyle = "#7a6454";
+          ctx.font = "13px Microsoft YaHei, sans-serif";
+          wrapText(box.data.text, box.x + 62, box.y + 50, box.w - 86, 18);
+          ctx.fillStyle = on ? "#e24b4a" : "#cbb396";
+          ctx.beginPath();
+          ctx.arc(box.port.x, box.port.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fffaf3";
+          ctx.beginPath();
+          ctx.arc(box.port.x, box.port.y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        lay.houses.forEach(function (box) {
+          const takenBy = Object.keys(state.links).find(function (k) { return state.links[k] === box.id; });
+          const hover = state.drag && hitHouse(state.drag, lay) === box.id;
+          const ok = state.checked && takenBy && state.results[takenBy];
+          const bad = state.checked && takenBy && state.results[takenBy] === false;
+          ctx.fillStyle = hover ? "#fff1e0" : "#fbf3e8";
+          roundRect(box.x, box.y, box.w, box.h, 12);
+          ctx.fill();
+          ctx.strokeStyle = bad ? "#e24b4a" : ok ? "#2f8a56" : hover ? "#e24b4a" : "#ead7c2";
+          ctx.lineWidth = hover || ok || bad ? 2 : 1;
+          roundRect(box.x, box.y, box.w, box.h, 12);
+          ctx.stroke();
+          drawHouse(box.data, box);
+          ctx.fillStyle = hover ? "#e24b4a" : "#cbb396";
+          ctx.beginPath();
+          ctx.arc(box.port.x, box.port.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fffaf3";
+          ctx.beginPath();
+          ctx.arc(box.port.x, box.port.y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        syncChrome();
+      }
+
+      function wrapText(text, x, y, maxW, lineH) {
+        const chars = text.split("");
+        let line = "";
+        let yy = y;
+        chars.forEach(function (ch) {
+          const test = line + ch;
+          if (ctx.measureText(test).width > maxW && line) {
+            ctx.fillText(line, x, yy);
+            line = ch;
+            yy += lineH;
+          } else line = test;
+        });
+        if (line) ctx.fillText(line, x, yy);
+      }
+
+      function hitAnimal(pt, lay) {
+        for (let i = 0; i < lay.animals.length; i++) {
+          const b = lay.animals[i];
+          if (pt.x >= b.x && pt.x <= b.x + b.w + 10 && pt.y >= b.y && pt.y <= b.y + b.h) return b.id;
+        }
+        return null;
+      }
+      function hitHouse(pt, lay) {
+        for (let i = 0; i < lay.houses.length; i++) {
+          const b = lay.houses[i];
+          if (pt.x >= b.x - 10 && pt.x <= b.x + b.w && pt.y >= b.y && pt.y <= b.y + b.h) return b.id;
+        }
+        return null;
+      }
+
+      function connect(animalId, houseId) {
+        Object.keys(state.links).forEach(function (k) {
+          if (state.links[k] === houseId) delete state.links[k];
+        });
+        state.links[animalId] = houseId;
+        state.selected = null;
+        state.checked = false;
+        state.results = {};
+        state.status = "已连 " + linkedCount() + " / 4。四条线都连好后点「检查」。";
+      }
+
+      function toLocal(ev) {
+        const box = canvas.getBoundingClientRect();
+        return { x: ev.clientX - box.left, y: ev.clientY - box.top };
+      }
+
+      canvas.addEventListener("pointerdown", function (ev) {
+        const pt = toLocal(ev);
+        const lay = layout();
+        const aid = hitAnimal(pt, lay);
+        if (!aid) {
+          const hid = hitHouse(pt, lay);
+          if (hid && state.selected) {
+            connect(state.selected, hid);
+            render();
+          }
+          return;
+        }
+        canvas.setPointerCapture(ev.pointerId);
+        state.drag = { id: aid, x: pt.x, y: pt.y, startX: pt.x, startY: pt.y, moved: false };
+        state.selected = aid;
+        canvas.style.cursor = "grabbing";
+        render();
+      });
+      canvas.addEventListener("pointermove", function (ev) {
+        if (!state.drag) return;
+        const pt = toLocal(ev);
+        if (Math.hypot(pt.x - state.drag.startX, pt.y - state.drag.startY) > 8) state.drag.moved = true;
+        state.drag.x = pt.x;
+        state.drag.y = pt.y;
+        render();
+      });
+      function endDrag(ev) {
+        if (!state.drag) return;
+        const pt = toLocal(ev);
+        const lay = layout();
+        const hid = hitHouse(pt, lay);
+        const moved = state.drag.moved;
+        const aid = state.drag.id;
+        state.drag = null;
+        canvas.style.cursor = "default";
+        if (hid) connect(aid, hid);
+        else if (!moved) {
+          state.selected = aid;
+          state.status = "已选中" + level().animals.find(function (a) { return a.id === aid; }).name + "，再点右边的房子。";
+        }
+        render();
+      }
+      canvas.addEventListener("pointerup", endDrag);
+      canvas.addEventListener("pointercancel", endDrag);
+
+      function check() {
+        if (linkedCount() < 4) {
+          state.checked = false;
+          state.results = {};
+          state.status = "还没连完。每个小动物都要连到一栋房子。";
+          formulaEl.className = "formula show warn";
+          formulaEl.textContent = "先把 4 条线都连上，再检查。";
+          render();
+          return;
+        }
+        const ans = level().answer;
+        let right = 0;
+        level().animals.forEach(function (a) {
+          const ok = state.links[a.id] === ans[a.id];
+          state.results[a.id] = ok;
+          if (ok) right += 1;
+        });
+        state.checked = true;
+        if (right === 4) {
+          state.status = "全对了！每个小动物都找到了自己的家。";
+          formulaEl.className = "formula show";
+          formulaEl.textContent = "观察得很仔细。可以点「下一关」，房子顺序会打乱。";
+        } else {
+          state.status = "对了 " + right + " 条。绿线是对的，红线要再看看描述。";
+          formulaEl.className = "formula show warn";
+          formulaEl.textContent = "红线可以重新拖。对照左边的房顶、窗户、门和烟囱。";
+        }
+        render();
+      }
+
+      function syncChrome() {
+        document.getElementById("statLevel").textContent = String(state.level + 1);
+        document.getElementById("statLinked").textContent = linkedCount() + "/4";
+        const right = state.checked
+          ? String(Object.keys(state.results).filter(function (k) { return state.results[k]; }).length)
+          : "?";
+        document.getElementById("statRight").textContent = right;
+        statusEl.textContent = state.status;
+        document.getElementById("btnNext").disabled = !(state.checked && linkedCount() === 4 &&
+          Object.keys(state.results).filter(function (k) { return state.results[k]; }).length === 4);
+        document.querySelectorAll("#levels .chip").forEach(function (el, i) {
+          el.classList.toggle("active", i === state.level);
+        });
+      }
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        cssW = rect.width;
+        cssH = rect.height;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        render();
+      }
+
+      document.getElementById("levels").innerHTML = LEVELS.map(function (lv, i) {
+        return '<button type="button" class="chip">第 ' + (i + 1) + " 关</button>";
+      }).join("");
+      document.querySelectorAll("#levels .chip").forEach(function (el, i) {
+        el.addEventListener("click", function () {
+          state.level = i;
+          resetRound(false);
+        });
+      });
+      document.getElementById("btnCheck").onclick = check;
+      document.getElementById("btnReset").onclick = function () { resetRound(true); };
+      document.getElementById("btnNext").onclick = function () {
+        state.level = (state.level + 1) % LEVELS.length;
+        resetRound(false);
+      };
+
+      window.addEventListener("resize", resize);
+      resetRound(false);
+      resize();
+    })();
+  </script>
+</body>
+</html>
