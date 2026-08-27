@@ -1,0 +1,17 @@
+---
+description: 儿童互动练习 HTML 页主题、骨架与交互约定
+globs: "*.html"
+alwaysApply: false
+---
+
+# kids 练习页约定
+
+改/加 `*.html` 前先读根目录 `AGENTS.md`。摘要：
+
+- **单文件静态 HTML**，无构建；入口 `index.html`，新页必须挂列表并改 `README.md`。
+- **主题**：白底车练习场；UI 装饰必有角落车、回家园、马路条、stage 轮子；3～5 岁数学用车当素材；分苹果/找房子玩法素材不变。
+- **Token**：`--bg/--paper/--ink/--muted/--line/--red(#ff7a1a 品牌橙)/--ok`；错误高亮用真红，勿用 `--red`。
+- **骨架**：car-deco → home「回家园」→ h1 → road-line → lead → levels/chips → stats → stage → `#status`。
+- **数量档**：3 岁 1～10；4～5 岁 10～20；进阶自定义 min/max（凑一凑为合值 10/20/自定义）。
+- **状态文案**：`setStatus(msg,"ok"|"bad")`；对绿错红高亮。
+- 复制现有页样式与 chrome，只改玩法区；按钮用立体阴影 chip/大点击区。

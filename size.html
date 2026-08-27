@@ -118,7 +118,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -176,6 +188,13 @@
       const state = { hard: false, ans: "left", left: 90, right: 48, shape: "circle", color: COLORS[0], correct: 0, q: 1, lock: false };
 
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
       function svg(size, shape, color) {
         const w = Math.round(size * 1.35);
         const h = Math.round(size * 0.85);
@@ -219,7 +238,7 @@
         right.innerHTML = "<h3>右边</h3>" + svg(state.right, state.shape, state.color);
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent = "点更大的一边，或点下面的按钮。";
+        setStatus("点更大的一边，或点下面的按钮。");
         drawBtns();
       }
       function drawBtns() {
@@ -251,8 +270,7 @@
           if (id === "same") { left.classList.add("ok"); right.classList.add("ok"); }
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
-          document.getElementById("status").textContent =
-            id === "same" ? "对了！两边一样大。" : "对了！这一边更大。";
+          setStatus(id === "same" ? "对了！两边一样大。" : "对了！这一边更大。", "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) { state.correct = 0; state.q = 1; }
@@ -262,7 +280,7 @@
           if (btn) btn.classList.add("bad");
           if (id === "left") left.classList.add("bad");
           if (id === "right") right.classList.add("bad");
-          document.getElementById("status").textContent = "再比一比，谁占的地方更大。";
+          setStatus("再比一比，谁占的地方更大。", "bad");
           setTimeout(function () {
             if (btn) btn.classList.remove("bad");
             left.classList.remove("bad");

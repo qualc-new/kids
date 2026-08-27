@@ -97,6 +97,21 @@
       font-size: 15px;
       font-weight: 600;
       line-height: 1.45;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+    }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
     }
     .formula {
       display: none;
@@ -701,6 +716,11 @@
           : "?";
         document.getElementById("statRight").textContent = right;
         statusEl.textContent = state.status;
+        statusEl.classList.remove("ok", "bad");
+        if (state.checked) {
+          const allOk = level().animals.every(function (a) { return state.results[a.id]; });
+          statusEl.classList.add(allOk ? "ok" : "bad");
+        }
         document.getElementById("btnNext").disabled = !(state.checked && linkedCount() === 4 &&
           Object.keys(state.results).filter(function (k) { return state.results[k]; }).length === 4);
         document.querySelectorAll("#levels .chip").forEach(function (el, i) {

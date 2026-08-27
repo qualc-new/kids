@@ -94,6 +94,14 @@
       cursor: grab;
       touch-action: none;
     }
+    .slots.many .slot, .pool.many .tile, .ghost-tile.many {
+      width: 48px;
+      height: 48px;
+      font-size: 18px;
+      border-radius: 12px;
+    }
+    .slots.many .slot { font-size: 11px; }
+    .slots.many .slot.filled { font-size: 18px; }
     .tile.ghost { opacity: 0.25; }
     .ghost-tile {
       position: fixed;
@@ -108,6 +116,36 @@
       place-items: center;
       pointer-events: none;
       z-index: 9;
+    }
+    .custom-box {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .custom-box.show { display: flex; }
+    .custom-box label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .custom-box input {
+      width: 72px;
+      height: 40px;
+      border: 3px solid var(--line);
+      border-radius: 12px;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--ink);
+      background: #fff;
+    }
+    .custom-box input:focus {
+      outline: none;
+      border-color: var(--red);
     }
     .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
 
@@ -147,7 +185,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -182,9 +232,15 @@
     <div class="road-line" aria-hidden="true"></div>
     <p class="lead">给车队按号码从小到大排队。可以点空位再点号码，也可以拖进去。</p>
     <div class="row">
-      <button type="button" class="chip active" id="easy">3 岁 · 1到3</button>
-      <button type="button" class="chip" id="hard">4～5 岁 · 1到5</button>
+      <span id="levels" style="display:contents"></span>
       <button type="button" class="ghost" id="reset">再来一盘</button>
+    </div>
+    <div class="custom-box" id="customBox">
+      <label for="customMin">最小</label>
+      <input id="customMin" type="number" min="1" max="30" value="5" inputmode="numeric" />
+      <label for="customMax">最大</label>
+      <input id="customMax" type="number" min="1" max="30" value="12" inputmode="numeric" />
+      <button type="button" class="chip" id="customApply">确定</button>
     </div>
     <div class="stats">
       <div class="stat"><b id="done">0</b><span>完成盘数</span></div>
@@ -200,8 +256,20 @@
   <div class="ghost-tile" id="ghost"></div>
   <script>
     (function () {
+      const RANGE_LEVELS = [
+        { id: "lv10", label: "3 岁 · 1～10", min: 1, max: 10 },
+        { id: "lv20", label: "4～5 岁 · 10～20", min: 10, max: 20 },
+        { id: "custom", label: "进阶 · 自定义", custom: true },
+      ];
+      const DEFAULT_LEVEL = "lv10";
+      const BOUND_MIN = 1;
+      const BOUND_MAX = 30;
       const state = {
-        max: 3,
+        levelId: DEFAULT_LEVEL,
+        min: 1,
+        max: 10,
+        customMin: 5,
+        customMax: 12,
         slots: [],
         pool: [],
         selectedSlot: null,
@@ -209,6 +277,26 @@
         done: 0,
       };
 
+      function count() { return state.max - state.min + 1; }
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
+      function expectAt(i) { return state.min + i; }
+      function clampBound(n) {
+        const v = Math.floor(Number(n));
+        if (!isFinite(v)) return BOUND_MIN;
+        return Math.max(BOUND_MIN, Math.min(BOUND_MAX, v));
+      }
+      function normalizeRange(lo, hi) {
+        let a = clampBound(lo);
+        let b = clampBound(hi);
+        if (a > b) { const t = a; a = b; b = t; }
+        return { min: a, max: b };
+      }
       function shuffle(a) {
         const arr = a.slice();
         for (let i = arr.length - 1; i > 0; i--) {
@@ -217,27 +305,67 @@
         }
         return arr;
       }
+      function syncCustomBox() {
+        const box = document.getElementById("customBox");
+        const show = state.levelId === "custom";
+        box.classList.toggle("show", show);
+        if (show) {
+          document.getElementById("customMin").value = String(state.customMin);
+          document.getElementById("customMax").value = String(state.customMax);
+        }
+      }
+      function setLevel(levelId, customMin, customMax) {
+        const level = RANGE_LEVELS.find(function (item) { return item.id === levelId; }) || RANGE_LEVELS[0];
+        state.levelId = level.id;
+        if (level.custom) {
+          if (customMin != null || customMax != null) {
+            const range = normalizeRange(
+              customMin != null ? customMin : state.customMin,
+              customMax != null ? customMax : state.customMax
+            );
+            state.customMin = range.min;
+            state.customMax = range.max;
+          }
+          state.min = state.customMin;
+          state.max = state.customMax;
+        } else {
+          state.min = level.min;
+          state.max = level.max;
+        }
+        state.done = 0;
+        document.querySelectorAll("#levels .chip").forEach(function (el) {
+          el.classList.toggle("active", el.dataset.id === level.id);
+        });
+        syncCustomBox();
+        deal();
+      }
       function deal() {
-        state.slots = Array.from({ length: state.max }, function () { return null; });
-        state.pool = shuffle(Array.from({ length: state.max }, function (_, i) { return i + 1; }));
+        const n = count();
+        state.slots = Array.from({ length: n }, function () { return null; });
+        state.pool = shuffle(Array.from({ length: n }, function (_, i) { return expectAt(i); }));
         state.selectedSlot = null;
         state.drag = null;
-        document.getElementById("status").textContent = "先找最小的数字，放到最左边。";
+        setStatus("把 " + state.min + "～" + state.max + " 从小到大排好，先找最小的。");
         render();
       }
       function leftover() {
         return state.pool.length;
       }
       function render() {
+        const many = count() >= 8;
         const slots = document.getElementById("slots");
         const pool = document.getElementById("pool");
+        const ghost = document.getElementById("ghost");
+        slots.className = "slots" + (many ? " many" : "");
+        pool.className = "pool" + (many ? " many" : "");
+        ghost.classList.toggle("many", many);
         slots.innerHTML = "";
         pool.innerHTML = "";
         state.slots.forEach(function (n, i) {
           const el = document.createElement("button");
           el.type = "button";
           el.className = "slot" + (n != null ? " filled" : "") + (state.selectedSlot === i ? " hot" : "");
-          el.textContent = n != null ? String(n) : "第" + (i + 1) + "个";
+          el.textContent = n != null ? String(n) : "第" + (i + 1) + "位";
           el.onclick = function () { onSlotClick(i); };
           slots.appendChild(el);
         });
@@ -255,29 +383,28 @@
         document.getElementById("done").textContent = String(state.done);
       }
       function tryPlace(n, slotIndex) {
-        const expect = slotIndex + 1;
+        const expect = expectAt(slotIndex);
         if (n === expect) {
           state.slots[slotIndex] = n;
           state.pool = state.pool.filter(function (x) { return x !== n; });
           state.selectedSlot = null;
-          document.getElementById("status").textContent = "对了！继续排下一个。";
+          setStatus("对了！继续排下一个。", "ok");
           render();
           if (leftover() === 0) {
             state.done += 1;
-            document.getElementById("status").textContent = "排好了！从小到大：" + state.slots.join("、");
+            setStatus("排好了！从小到大：" + state.slots.join("、"), "ok");
             document.getElementById("done").textContent = String(state.done);
             setTimeout(deal, 1100);
           }
         } else {
-          document.getElementById("status").textContent =
-            "第 " + (slotIndex + 1) + " 个位置应该放 " + expect + "。";
+          setStatus("第 " + (slotIndex + 1) + " 个位置应该放 " + expect + "。", "bad");
           render();
         }
       }
       function onSlotClick(i) {
         if (state.slots[i] != null) return;
         state.selectedSlot = i;
-        document.getElementById("status").textContent = "再点下面的数字放进来。";
+        setStatus("再点下面的数字放进来。");
         render();
       }
       function onTileClick(n) {
@@ -302,8 +429,9 @@
       }
       function moveGhost(x, y) {
         const g = document.getElementById("ghost");
-        g.style.left = (x - 32) + "px";
-        g.style.top = (y - 32) + "px";
+        const half = count() >= 8 ? 24 : 32;
+        g.style.left = (x - half) + "px";
+        g.style.top = (y - half) + "px";
       }
       function slotAt(x, y) {
         const nodes = document.querySelectorAll(".slot");
@@ -332,20 +460,28 @@
         if (moved && idx != null && state.slots[idx] == null) tryPlace(n, idx);
         else render();
       });
-      document.getElementById("easy").onclick = function () {
-        state.max = 3; state.done = 0;
-        this.classList.add("active");
-        document.getElementById("hard").classList.remove("active");
-        deal();
-      };
-      document.getElementById("hard").onclick = function () {
-        state.max = 5; state.done = 0;
-        this.classList.add("active");
-        document.getElementById("easy").classList.remove("active");
-        deal();
-      };
+
+      const levelRow = document.getElementById("levels");
+      RANGE_LEVELS.forEach(function (level) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.dataset.id = level.id;
+        btn.textContent = level.label;
+        btn.onclick = function () { setLevel(level.id); };
+        levelRow.appendChild(btn);
+      });
+      function applyCustom() {
+        setLevel("custom", document.getElementById("customMin").value, document.getElementById("customMax").value);
+      }
+      document.getElementById("customApply").onclick = applyCustom;
+      ["customMin", "customMax"].forEach(function (id) {
+        document.getElementById(id).addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") applyCustom();
+        });
+      });
       document.getElementById("reset").onclick = deal;
-      deal();
+      setLevel(DEFAULT_LEVEL);
     })();
   </script>
 </body>

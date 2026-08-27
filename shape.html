@@ -114,7 +114,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -175,6 +187,13 @@
       const state = { hard: false, ans: "circle", correct: 0, q: 1, lock: false };
 
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
       function shuffle(a) {
         const arr = a.slice();
         for (let i = arr.length - 1; i > 0; i--) {
@@ -231,9 +250,9 @@
         });
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent = state.hard
+        setStatus(state.hard
           ? "颜色可能不一样，只看形状。"
-          : "找出和上面一样的形状。";
+          : "找出和上面一样的形状。");
       }
       function pick(id, btn) {
         if (state.lock) return;
@@ -242,7 +261,7 @@
           btn.classList.add("ok");
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
-          document.getElementById("status").textContent = "对了！就是这个形状。";
+          setStatus("对了！就是这个形状。", "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) { state.correct = 0; state.q = 1; }
@@ -250,7 +269,7 @@
           }, 900);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再看看上面的样子。";
+          setStatus("再看看上面的样子。", "bad");
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }

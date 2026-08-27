@@ -119,7 +119,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -191,6 +203,13 @@
         { shown: ["square", "circle", "circle", "square", "circle"], next: "circle", pool: ["circle", "square", "tri"] },
       ];
       const state = { hard: false, i: 0, correct: 0, q: 1, lock: false, item: null };
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
 
       function shuffle(a) {
         const arr = a.slice();
@@ -238,7 +257,7 @@
         });
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent = "看一看，谁在重复出现。";
+        setStatus("看一看，谁在重复出现。");
       }
       function pick(k, btn) {
         if (state.lock) return;
@@ -247,19 +266,19 @@
           btn.classList.add("ok");
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
-          document.getElementById("status").textContent = "对了！就是这样排的。";
+          setStatus("对了！就是这样排的。", "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) {
               state.correct = 0;
               state.q = 1;
-              document.getElementById("status").textContent = "规律找得很准！再来一组。";
+              setStatus("规律找得很准！再来一组。", "ok");
             }
             nextQ();
           }, 900);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再看一遍前面几个，找重复的顺序。";
+          setStatus("再看一遍前面几个，找重复的顺序。", "bad");
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }

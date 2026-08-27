@@ -73,6 +73,41 @@
       background-repeat: no-repeat;
       background-position: center;
     }
+    .dots.compact { gap: 4px; }
+    .dots.compact .dot {
+      width: 36px;
+      height: 22px;
+    }
+    .custom-box {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .custom-box.show { display: flex; }
+    .custom-box label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .custom-box input {
+      width: 72px;
+      height: 40px;
+      border: 3px solid var(--line);
+      border-radius: 12px;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--ink);
+      background: #fff;
+    }
+    .custom-box input:focus {
+      outline: none;
+      border-color: var(--red);
+    }
     .btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
     .btns button {
       min-width: 120px;
@@ -122,7 +157,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -156,9 +203,13 @@
     <h1>谁更多</h1>
     <div class="road-line" aria-hidden="true"></div>
     <p class="lead">数一数两边的小汽车，再选出谁多。有时候两边一样多。</p>
-    <div class="row">
-      <button type="button" class="chip active" id="easy">3 岁 · 差得明显</button>
-      <button type="button" class="chip" id="hard">4～5 岁 · 含一样多</button>
+    <div class="row" id="levels"></div>
+    <div class="custom-box" id="customBox">
+      <label for="customMin">最小</label>
+      <input id="customMin" type="number" min="1" max="30" value="5" inputmode="numeric" />
+      <label for="customMax">最大</label>
+      <input id="customMax" type="number" min="1" max="30" value="15" inputmode="numeric" />
+      <button type="button" class="chip" id="customApply">确定</button>
     </div>
     <div class="stats">
       <div class="stat"><b id="q">1</b><span>第几题</span></div>
@@ -176,30 +227,111 @@
   </div>
   <script>
     (function () {
-      const state = { hard: false, left: 3, right: 1, ans: "left", correct: 0, q: 1, lock: false };
+      const RANGE_LEVELS = [
+        { id: "lv10", label: "3 岁 · 1～10", min: 1, max: 10, allowSame: false },
+        { id: "lv20", label: "4～5 岁 · 10～20", min: 10, max: 20, allowSame: true },
+        { id: "custom", label: "进阶 · 自定义", custom: true, allowSame: true },
+      ];
+      const DEFAULT_LEVEL = "lv10";
+      const BOUND_MIN = 1;
+      const BOUND_MAX = 30;
+      const state = {
+        levelId: DEFAULT_LEVEL,
+        min: 1,
+        max: 10,
+        allowSame: false,
+        customMin: 5,
+        customMax: 15,
+        left: 3,
+        right: 1,
+        ans: "left",
+        correct: 0,
+        q: 1,
+        lock: false,
+      };
+
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function clampBound(n) {
+        const v = Math.floor(Number(n));
+        if (!isFinite(v)) return BOUND_MIN;
+        return Math.max(BOUND_MIN, Math.min(BOUND_MAX, v));
+      }
+      function normalizeRange(lo, hi) {
+        let a = clampBound(lo);
+        let b = clampBound(hi);
+        if (a > b) { const t = a; a = b; b = t; }
+        return { min: a, max: b };
+      }
       function dots(el, n, cls) {
         el.innerHTML = "";
+        el.className = "dots" + (n >= 10 ? " compact" : "");
         for (let i = 0; i < n; i++) {
           const d = document.createElement("div");
           d.className = "dot" + (cls || "");
           el.appendChild(d);
         }
       }
+      function syncCustomBox() {
+        const box = document.getElementById("customBox");
+        const show = state.levelId === "custom";
+        box.classList.toggle("show", show);
+        if (show) {
+          document.getElementById("customMin").value = String(state.customMin);
+          document.getElementById("customMax").value = String(state.customMax);
+        }
+      }
+      function setLevel(levelId, customMin, customMax) {
+        const level = RANGE_LEVELS.find(function (item) { return item.id === levelId; }) || RANGE_LEVELS[0];
+        state.levelId = level.id;
+        state.allowSame = !!level.allowSame;
+        if (level.custom) {
+          if (customMin != null || customMax != null) {
+            const range = normalizeRange(
+              customMin != null ? customMin : state.customMin,
+              customMax != null ? customMax : state.customMax
+            );
+            state.customMin = range.min;
+            state.customMax = range.max;
+          }
+          state.min = state.customMin;
+          state.max = state.customMax;
+        } else {
+          state.min = level.min;
+          state.max = level.max;
+        }
+        state.correct = 0;
+        state.q = 1;
+        document.querySelectorAll("#levels .chip").forEach(function (el) {
+          el.classList.toggle("active", el.dataset.id === level.id);
+        });
+        syncCustomBox();
+        nextQ();
+      }
       function nextQ() {
         state.lock = false;
-        const max = state.hard ? 5 : 4;
-        if (!state.hard) {
-          state.left = rand(1, max);
-          do { state.right = rand(1, max); } while (Math.abs(state.left - state.right) < 2);
+        const lo = state.min;
+        const hi = state.max;
+        if (!state.allowSame) {
+          state.left = rand(lo, hi);
+          do { state.right = rand(lo, hi); } while (Math.abs(state.left - state.right) < 2 && hi - lo >= 2);
+          if (state.left === state.right) {
+            state.right = state.left >= hi ? lo : state.left + 1;
+          }
         } else {
           const mode = rand(0, 2);
           if (mode === 0) {
-            state.left = rand(1, max);
+            state.left = rand(lo, hi);
             state.right = state.left;
           } else {
-            state.left = rand(1, max);
-            do { state.right = rand(1, max); } while (state.right === state.left);
+            state.left = rand(lo, hi);
+            do { state.right = rand(lo, hi); } while (state.right === state.left && hi > lo);
           }
         }
         state.ans = state.left === state.right ? "same" : (state.left > state.right ? "left" : "right");
@@ -207,7 +339,7 @@
         dots(document.getElementById("rightDots"), state.right, " blue");
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent = "数一数，再点下面的按钮。";
+        setStatus("数一数，再点下面的按钮。（每边 " + lo + "～" + hi + " 辆）");
         drawBtns();
       }
       function drawBtns() {
@@ -217,7 +349,7 @@
           { id: "same", label: "一样多" },
           { id: "right", label: "右边多" },
         ];
-        const show = state.hard ? opts : opts.filter(function (o) { return o.id !== "same"; });
+        const show = state.allowSame ? opts : opts.filter(function (o) { return o.id !== "same"; });
         box.innerHTML = "";
         show.forEach(function (o) {
           const b = document.createElement("button");
@@ -237,35 +369,43 @@
           const msg = state.ans === "same"
             ? "两边一样多。"
             : (state.ans === "left" ? "左边多。" : "右边多。") + " " + state.left + " 和 " + state.right + "。";
-          document.getElementById("status").textContent = "对了！" + msg;
+          setStatus("对了！" + msg, "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) {
               state.correct = 0;
               state.q = 1;
-              document.getElementById("status").textContent = "真棒！再来一组。";
+              setStatus("真棒！再来一组。", "ok");
             }
             nextQ();
           }, 1000);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再数一遍。一边点一个，数完再比。";
+          setStatus("再数一遍。一边点一个，数完再比。", "bad");
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }
-      document.getElementById("easy").onclick = function () {
-        state.hard = false; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("hard").classList.remove("active");
-        nextQ();
-      };
-      document.getElementById("hard").onclick = function () {
-        state.hard = true; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("easy").classList.remove("active");
-        nextQ();
-      };
-      nextQ();
+
+      const levelRow = document.getElementById("levels");
+      RANGE_LEVELS.forEach(function (level) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.dataset.id = level.id;
+        btn.textContent = level.label;
+        btn.onclick = function () { setLevel(level.id); };
+        levelRow.appendChild(btn);
+      });
+      function applyCustom() {
+        setLevel("custom", document.getElementById("customMin").value, document.getElementById("customMax").value);
+      }
+      document.getElementById("customApply").onclick = applyCustom;
+      ["customMin", "customMax"].forEach(function (id) {
+        document.getElementById(id).addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") applyCustom();
+        });
+      });
+      setLevel(DEFAULT_LEVEL);
     })();
   </script>
 </body>

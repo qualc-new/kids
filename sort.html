@@ -135,7 +135,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -201,6 +213,13 @@
       };
 
       function shuffle(a) {
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
         const arr = a.slice();
         for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -221,7 +240,7 @@
         state.items = shuffle(state.items);
         const names = state.keys.map(function (k) { return COLORS[k].name; }).join("、");
         document.querySelector(".ask").textContent = "按颜色把小汽车开进车库：" + names + "。";
-        document.getElementById("status").textContent = "拖到颜色一样的车库里。";
+        setStatus("拖到颜色一样的车库里。");
         render();
       }
       function leftover() {
@@ -300,10 +319,10 @@
         document.querySelectorAll(".basket").forEach(function (el) { el.classList.remove("hot"); });
         if (target && target === it.color) {
           it.place = target;
-          document.getElementById("status").textContent = "放对了！";
+          setStatus("放对了！", "ok");
         } else if (target) {
           it.place = "pile";
-          document.getElementById("status").textContent = "这是" + COLORS[it.color].name + "色的，开到" + COLORS[it.color].name + "车库里。";
+          setStatus("这是" + COLORS[it.color].name + "色的，开到" + COLORS[it.color].name + "车库里。", "bad");
         } else {
           it.place = "pile";
         }
@@ -311,7 +330,7 @@
         render();
         if (leftover() === 0) {
           state.done += 1;
-          document.getElementById("status").textContent = "全部分好了！真能干。";
+          setStatus("全部分好了！真能干。", "ok");
           document.getElementById("done").textContent = String(state.done);
           setTimeout(deal, 1100);
         }

@@ -56,8 +56,11 @@
       background: #eef5fb;
       border-radius: 18px;
     }
-    .items svg { width: 64px; height: 64px; }
+    .items svg { width: 64px; height: 40px; }
+    .items.many { gap: 8px; padding: 10px; }
+    .items.many svg { width: 44px; height: 28px; }
     .nums { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    .nums.many { gap: 8px; }
     .num {
       width: 72px;
       height: 72px;
@@ -66,6 +69,42 @@
       background: #fff;
       font-size: 32px;
       font-weight: 700;
+    }
+    .nums.many .num {
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+      border-radius: 14px;
+    }
+    .custom-box {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .custom-box.show { display: flex; }
+    .custom-box label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .custom-box input {
+      width: 72px;
+      height: 40px;
+      border: 3px solid var(--line);
+      border-radius: 12px;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--ink);
+      background: #fff;
+    }
+    .custom-box input:focus {
+      outline: none;
+      border-color: var(--red);
     }
     .num.ok { border-color: var(--ok); background: #eef8f1; }
     .num.bad { border-color: var(--red); background: #fdeeee; }
@@ -107,7 +146,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -141,9 +192,13 @@
     <h1>数一数</h1>
     <div class="road-line" aria-hidden="true"></div>
     <p class="lead">看一看，有几辆小汽车？点下面的数字。</p>
-    <div class="row">
-      <button type="button" class="chip active" id="easy">3 岁 · 1到3</button>
-      <button type="button" class="chip" id="hard">4～5 岁 · 1到5</button>
+    <div class="row" id="levels"></div>
+    <div class="custom-box" id="customBox">
+      <label for="customMin">最小</label>
+      <input id="customMin" type="number" min="1" max="30" value="5" inputmode="numeric" />
+      <label for="customMax">最大</label>
+      <input id="customMax" type="number" min="1" max="30" value="15" inputmode="numeric" />
+      <button type="button" class="chip" id="customApply">确定</button>
     </div>
     <div class="stats">
       <div class="stat"><b id="q">1</b><span>第几题</span></div>
@@ -166,33 +221,126 @@
         { name: "小汽车", svg: CAR("#ff7a1a") },
         { name: "小汽车", svg: CAR("#2bb673") },
       ];
-      const WORDS = ["", "一", "两", "三", "四", "五"];
-      const state = { max: 3, n: 1, kind: 0, correct: 0, q: 1, lock: false };
+      const DIGITS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+      const RANGE_LEVELS = [
+        { id: "lv10", label: "3 岁 · 1～10", min: 1, max: 10 },
+        { id: "lv20", label: "4～5 岁 · 10～20", min: 10, max: 20 },
+        { id: "custom", label: "进阶 · 自定义", custom: true },
+      ];
+      const DEFAULT_LEVEL = "lv10";
+      const BOUND_MIN = 1;
+      const BOUND_MAX = 30;
+
+      const state = {
+        levelId: DEFAULT_LEVEL,
+        min: 1,
+        max: 10,
+        customMin: 5,
+        customMax: 15,
+        n: 1,
+        kind: 0,
+        correct: 0,
+        q: 1,
+        lock: false,
+      };
+
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
 
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function clampBound(n) {
+        const v = Math.floor(Number(n));
+        if (!isFinite(v)) return BOUND_MIN;
+        return Math.max(BOUND_MIN, Math.min(BOUND_MAX, v));
+      }
+      function normalizeRange(lo, hi) {
+        let a = clampBound(lo);
+        let b = clampBound(hi);
+        if (a > b) { const t = a; a = b; b = t; }
+        return { min: a, max: b };
+      }
+      function wordOf(n) {
+        if (n <= 0) return String(n);
+        if (n === 2) return "两";
+        if (n < 10) return DIGITS[n];
+        if (n === 10) return "十";
+        if (n < 20) return "十" + DIGITS[n - 10];
+        if (n === 20) return "二十";
+        if (n < 30) return "二十" + DIGITS[n - 20];
+        if (n === 30) return "三十";
+        return String(n);
+      }
+      function syncCustomBox() {
+        const box = document.getElementById("customBox");
+        const show = state.levelId === "custom";
+        box.classList.toggle("show", show);
+        if (show) {
+          document.getElementById("customMin").value = String(state.customMin);
+          document.getElementById("customMax").value = String(state.customMax);
+        }
+      }
+      function setLevel(levelId, customMin, customMax) {
+        const level = RANGE_LEVELS.find(function (item) { return item.id === levelId; }) || RANGE_LEVELS[0];
+        state.levelId = level.id;
+        if (level.custom) {
+          if (customMin != null || customMax != null) {
+            const range = normalizeRange(
+              customMin != null ? customMin : state.customMin,
+              customMax != null ? customMax : state.customMax
+            );
+            state.customMin = range.min;
+            state.customMax = range.max;
+          }
+          state.min = state.customMin;
+          state.max = state.customMax;
+        } else {
+          state.min = level.min;
+          state.max = level.max;
+        }
+        state.correct = 0;
+        state.q = 1;
+        state.n = state.min;
+        document.querySelectorAll("#levels .chip").forEach(function (el) {
+          el.classList.toggle("active", el.dataset.id === level.id);
+        });
+        syncCustomBox();
+        nextQ();
+      }
       function nextQ() {
         state.lock = false;
         state.kind = rand(0, KINDS.length - 1);
-        let n = rand(1, state.max);
-        if (n === state.n) n = n === state.max ? 1 : n + 1;
+        let n = rand(state.min, state.max);
+        if (n === state.n && state.max > state.min) {
+          n = n >= state.max ? state.min : n + 1;
+        }
         state.n = n;
         const k = KINDS[state.kind];
-        document.getElementById("ask").textContent = "有几个" + k.name + "？";
-        document.getElementById("items").innerHTML = Array(state.n).fill(k.svg).join("");
+        const many = state.n >= 8 || state.max - state.min >= 8;
+        const items = document.getElementById("items");
+        items.className = "items" + (many ? " many" : "");
+        document.getElementById("ask").textContent = "有几辆" + k.name + "？";
+        items.innerHTML = Array(state.n).fill(k.svg).join("");
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent = "用手指点着数：" + Array.from({ length: state.n }, function (_, i) { return i + 1; }).join("、") + "。";
+        setStatus(state.n <= 5
+          ? "用手指点着数：" + Array.from({ length: state.n }, function (_, i) { return i + 1; }).join("、") + "。"
+          : "用手指点着一辆一辆数。（范围 " + state.min + "～" + state.max + "）");
         drawNums();
       }
       function drawNums() {
         const box = document.getElementById("nums");
+        box.className = "nums" + (state.max - state.min >= 7 ? " many" : "");
         box.innerHTML = "";
-        for (let i = 1; i <= state.max; i++) {
+        for (let i = state.min; i <= state.max; i++) {
           const b = document.createElement("button");
           b.type = "button";
           b.className = "num";
           b.textContent = String(i);
-          b.setAttribute("aria-label", WORDS[i]);
+          b.setAttribute("aria-label", wordOf(i));
           b.onclick = function () { pick(i, b); };
           box.appendChild(b);
         }
@@ -204,11 +352,11 @@
           btn.classList.add("ok");
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
-          document.getElementById("status").textContent = "对了！是 " + WORDS[state.n] + " 个。";
+          setStatus("对了！是 " + wordOf(state.n) + " 辆。", "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) {
-              document.getElementById("status").textContent = "真棒，连对好多题！再来一组。";
+              setStatus("真棒，连对好多题！再来一组。", "ok");
               state.correct = 0;
               state.q = 1;
             }
@@ -216,23 +364,31 @@
           }, 900);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再数一遍。可以点着图，一个一个数。";
+          setStatus("再数一遍。可以点着图，一辆一辆数。", "bad");
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }
-      document.getElementById("easy").onclick = function () {
-        state.max = 3; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("hard").classList.remove("active");
-        nextQ();
-      };
-      document.getElementById("hard").onclick = function () {
-        state.max = 5; state.correct = 0; state.q = 1;
-        this.classList.add("active");
-        document.getElementById("easy").classList.remove("active");
-        nextQ();
-      };
-      nextQ();
+
+      const levelRow = document.getElementById("levels");
+      RANGE_LEVELS.forEach(function (level) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.dataset.id = level.id;
+        btn.textContent = level.label;
+        btn.onclick = function () { setLevel(level.id); };
+        levelRow.appendChild(btn);
+      });
+      function applyCustom() {
+        setLevel("custom", document.getElementById("customMin").value, document.getElementById("customMax").value);
+      }
+      document.getElementById("customApply").onclick = applyCustom;
+      ["customMin", "customMax"].forEach(function (id) {
+        document.getElementById(id).addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") applyCustom();
+        });
+      });
+      setLevel(DEFAULT_LEVEL);
     })();
   </script>
 </body>

@@ -113,6 +113,21 @@
       font-size: 15px;
       font-weight: 600;
       line-height: 1.45;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+    }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
     }
     .formula {
       display: none;
@@ -558,6 +573,12 @@
         document.getElementById("statEach").textContent = show ? String(quotient()) : "?";
         document.getElementById("statRem").textContent = show ? String(remainder()) : "?";
         statusEl.textContent = state.status;
+        statusEl.classList.remove("ok", "bad");
+        if (state.check === "ok" || (state.mode === "watch" && state.done)) {
+          statusEl.classList.add("ok");
+        } else if (state.check && state.check !== "ok") {
+          statusEl.classList.add("bad");
+        }
         btnMain.querySelector("#btnMainLabel").textContent = state.mode === "watch" ? "分发" : "检查";
         btnMain.disabled = state.playing;
         document.getElementById("nMinus").disabled = state.playing || state.n <= N_MIN;

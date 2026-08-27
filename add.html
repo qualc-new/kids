@@ -174,7 +174,19 @@
       transform: translateY(3px);
       box-shadow: 0 2px 0 #b8cce0;
     }
-    .status { font-size: 15px; font-weight: 600; }
+    .status { font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; }
+    .status.ok {
+      color: #187a4c;
+      background: #d8f5e5;
+      border-color: #2bb673;
+      font-weight: 800;
+    }
+    .status.bad {
+      color: #c62828;
+      background: #fde8e8;
+      border-color: #e53935;
+      font-weight: 800;
+    }
 
     .car-deco {
       position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
@@ -249,6 +261,13 @@
         lock: false,
       };
 
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
       function clampSum(n) {
         const v = Math.floor(Number(n));
@@ -315,8 +334,7 @@
         }
         document.getElementById("q").textContent = String(state.q);
         document.getElementById("ok").textContent = String(state.correct);
-        document.getElementById("status").textContent =
-          "橙色车 " + state.a + " 辆，蓝色车 " + state.b + " 辆，合起来几辆？（合计不超过 " + state.maxSum + "）";
+        setStatus("橙色车 " + state.a + " 辆，蓝色车 " + state.b + " 辆，合起来几辆？（合计不超过 " + state.maxSum + "）");
       }
       function pick(i, btn, sum) {
         if (state.lock) return;
@@ -325,8 +343,7 @@
           btn.classList.add("ok");
           state.correct += 1;
           document.getElementById("ok").textContent = String(state.correct);
-          document.getElementById("status").textContent =
-            "对了！" + state.a + " + " + state.b + " = " + sum + "（一共" + wordOf(sum) + "辆）";
+          setStatus("对了！" + state.a + " + " + state.b + " = " + sum + "（一共" + wordOf(sum) + "辆）", "ok");
           setTimeout(function () {
             state.q += 1;
             if (state.correct >= 8) { state.correct = 0; state.q = 1; }
@@ -334,7 +351,7 @@
           }, 1000);
         } else {
           btn.classList.add("bad");
-          document.getElementById("status").textContent = "再数一遍：一辆一辆点着数。";
+          setStatus("再数一遍：一辆一辆点着数。", "bad");
           setTimeout(function () { btn.classList.remove("bad"); }, 450);
         }
       }
