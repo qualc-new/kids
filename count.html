@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -6,15 +6,19 @@
   <title>数一数</title>
   <style>
     :root {
-      --bg: #ffffff; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
-      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --warn: #c56a16; --btn-ink: #fff;
+      --bg: #ffffff; --paper: #f4f8fc; --ink: #2c3e50; --muted: #6b7c8f;
+      --line: #c5d5e8; --red: #ff7a1a; --ok: #2bb673; --warn: #ffb347; --btn-ink: #fff;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
       color: var(--ink);
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 10% 6%, #e3f0ff 0, transparent 26%),
+        radial-gradient(circle at 92% 10%, #dff0ff 0, transparent 24%),
+        radial-gradient(circle at 80% 95%, #fff3c9 0, transparent 28%),
+        var(--bg);
       padding: 20px 16px 32px;
     }
     .wrap { max-width: 860px; margin: 0 auto; }
@@ -23,7 +27,7 @@
     .lead { margin: 0 0 14px; color: var(--muted); }
     .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .chip, button {
-      border: 1px solid var(--line);
+      border: 3px solid var(--line);
       background: var(--paper);
       color: var(--ink);
       border-radius: 999px;
@@ -37,8 +41,8 @@
     .stat span { color: var(--muted); font-size: 13px; }
     .stage {
       background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 16px;
+      border: 3px solid var(--line);
+      border-radius: 24px;
       padding: 18px 16px 20px;
     }
     .ask { margin: 0 0 14px; font-size: 20px; font-weight: 700; }
@@ -49,16 +53,16 @@
       gap: 14px;
       min-height: 140px;
       padding: 16px;
-      background: #f6ead8;
-      border-radius: 12px;
+      background: #eef5fb;
+      border-radius: 18px;
     }
     .items svg { width: 64px; height: 64px; }
     .nums { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
     .num {
       width: 72px;
       height: 72px;
-      border-radius: 16px;
-      border: 2px solid var(--line);
+      border-radius: 24px;
+      border: 3px solid var(--line);
       background: #fff;
       font-size: 32px;
       font-weight: 700;
@@ -66,13 +70,77 @@
     .num.ok { border-color: var(--ok); background: #eef8f1; }
     .num.bad { border-color: var(--red); background: #fdeeee; }
     .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
+
+    a.home {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 2px solid var(--line);
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    h1 { color: var(--red); font-weight: 800; letter-spacing: 0.5px; }
+    .chip, button {
+      font-weight: 700;
+      padding: 9px 16px;
+      background: #fff;
+      box-shadow: 0 4px 0 #b8cce0;
+    }
+    .chip.active, button.primary {
+      box-shadow: 0 4px 0 #d9650a;
+    }
+    .chip:active, button:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #b8cce0;
+    }
+    .stat b { color: var(--red); font-weight: 800; }
+    .ask { font-weight: 800; color: var(--ink); }
+    .stage { box-shadow: 0 8px 0 #d4e4f7; background: #fff; }
+    .num, .choice, .tile, .btns button {
+      box-shadow: 0 5px 0 #b8cce0;
+      font-weight: 800;
+    }
+    .num:active, .choice:active, .btns button:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #b8cce0;
+    }
+    .status { font-size: 15px; font-weight: 600; }
+
+    .car-deco {
+      position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0;
+    }
+    .car-deco-tl { top: 10px; left: 8px; }
+    .car-deco-tr { top: 14px; right: 10px; transform: scaleX(-1); }
+    .wrap { position: relative; z-index: 1; }
+    .road-line {
+      height: 7px; margin: 0 0 12px; border-radius: 999px;
+      background: repeating-linear-gradient(90deg, #ffd166 0 12px, transparent 12px 22px), #4a5568;
+      border: 2px solid #4a5568;
+    }
+    a.home {
+      display: inline-flex !important; align-items: center; gap: 6px;
+    }
+    .stage { position: relative; }
+    .stage::before, .stage::after {
+      content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+      background: #2c3e50; border: 3px solid #94a3b8; z-index: 2; bottom: 8px;
+    }
+    .stage::before { left: 8px; }
+    .stage::after { right: 8px; }
   </style>
 </head>
 <body>
+  <svg class="car-deco car-deco-tl" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#1e88e5"/><path d="M14 16l7-9h20l9 9z" fill="#1e88e5"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
+  <svg class="car-deco car-deco-tr" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="14" width="44" height="16" rx="3" fill="#ff7a1a"/><rect x="12" y="8" width="22" height="8" rx="2" fill="#ff9a4d"/><circle cx="18" cy="32" r="5" fill="#2c3e50"/><circle cx="40" cy="32" r="5" fill="#2c3e50"/><rect x="48" y="18" width="10" height="8" fill="#ffd166"/></svg>
   <div class="wrap">
-    <a class="home" href="index.html">全部练习</a>
+    <a class="home" href="index.html"><svg width="26" height="16" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#ff7a1a"/><path d="M14 16l7-9h20l9 9z" fill="#ff7a1a"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg> 回家园</a>
+    
     <h1>数一数</h1>
-    <p class="lead">看一看，有几个？点下面的数字。</p>
+    <div class="road-line" aria-hidden="true"></div>
+    <p class="lead">看一看，有几辆小汽车？点下面的数字。</p>
     <div class="row">
       <button type="button" class="chip active" id="easy">3 岁 · 1到3</button>
       <button type="button" class="chip" id="hard">4～5 岁 · 1到5</button>
@@ -82,7 +150,7 @@
       <div class="stat"><b id="ok">0</b><span>答对</span></div>
     </div>
     <div class="stage">
-      <p class="ask" id="ask">有几个苹果？</p>
+      <p class="ask" id="ask">有几辆小汽车？</p>
       <div class="items" id="items"></div>
       <div class="nums" id="nums"></div>
       <p class="status" id="status">先数一数，再点数字。</p>
@@ -90,10 +158,13 @@
   </div>
   <script>
     (function () {
+      const CAR = function (color) {
+        return '<svg viewBox="0 0 64 40" width="72" height="44"><rect x="6" y="16" width="52" height="14" rx="5" fill="' + color + '"/><path d="M14 16l7-9h20l9 9z" fill="' + color + '"/><circle cx="20" cy="31" r="5.5" fill="#2c3e50"/><circle cx="44" cy="31" r="5.5" fill="#2c3e50"/><circle cx="20" cy="31" r="2" fill="#94a3b8"/><circle cx="44" cy="31" r="2" fill="#94a3b8"/><rect x="22" y="9" width="10" height="7" rx="1.5" fill="#dbeafe"/><rect x="34" y="9" width="10" height="7" rx="1.5" fill="#dbeafe"/></svg>';
+      };
       const KINDS = [
-        { name: "苹果", svg: '<svg viewBox="0 0 48 48"><path d="M24 12c0-3 2-6 5-6" fill="none" stroke="#5a3a22" stroke-width="2"/><ellipse cx="31" cy="12" rx="6" ry="3" fill="#3d9a5f" transform="rotate(-30 31 12)"/><path d="M24 16c-8 0-13 8-12 16 1 7 6 12 12 12s11-5 12-12c1-8-4-16-12-16z" fill="#e24b4a"/></svg>' },
-        { name: "星星", svg: '<svg viewBox="0 0 48 48"><polygon points="24,4 29,18 44,18 32,27 37,42 24,33 11,42 16,27 4,18 19,18" fill="#e0b125"/></svg>' },
-        { name: "小球", svg: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16" fill="#3b7ec9"/><circle cx="18" cy="18" r="5" fill="rgba(255,255,255,.35)"/></svg>' },
+        { name: "小汽车", svg: CAR("#1e88e5") },
+        { name: "小汽车", svg: CAR("#ff7a1a") },
+        { name: "小汽车", svg: CAR("#2bb673") },
       ];
       const WORDS = ["", "一", "两", "三", "四", "五"];
       const state = { max: 3, n: 1, kind: 0, correct: 0, q: 1, lock: false };

@@ -7,14 +7,14 @@
   <style>
     :root {
       --bg: #ffffff;
-      --paper: #fffaf3;
-      --ink: #3a2a1a;
-      --muted: #7a6454;
-      --line: #ead7c2;
-      --red: #e24b4a;
-      --ok: #2f8a56;
-      --warn: #c56a16;
-      --btn: #e24b4a;
+      --paper: #f4f8fc;
+      --ink: #2c3e50;
+      --muted: #6b7c8f;
+      --line: #c5d5e8;
+      --red: #ff7a1a;
+      --ok: #2bb673;
+      --warn: #ffb347;
+      --btn: #ff7a1a;
       --btn-ink: #fff;
     }
     * { box-sizing: border-box; }
@@ -22,37 +22,56 @@
     body {
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
       color: var(--ink);
-      background: var(--bg);
+      background:
+        radial-gradient(circle at 10% 6%, #e3f0ff 0, transparent 26%),
+        radial-gradient(circle at 92% 10%, #dff0ff 0, transparent 24%),
+        radial-gradient(circle at 80% 95%, #fff3c9 0, transparent 28%),
+        var(--bg);
       padding: 20px 16px 32px;
     }
     .wrap { max-width: 980px; margin: 0 auto; }
-    h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; }
+    a.home {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 2px solid var(--line);
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    h1 { margin: 8px 0 6px; font-size: 30px; font-weight: 800; color: var(--red); letter-spacing: 0.5px; }
     .lead { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.5; }
     .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
     .chip, button {
-      border: 1px solid var(--line);
-      background: var(--paper);
+      border: 3px solid var(--line);
+      background: #fff;
       color: var(--ink);
       border-radius: 999px;
       font: inherit;
+      font-weight: 700;
       cursor: pointer;
-      padding: 7px 14px;
+      padding: 9px 16px;
+      box-shadow: 0 4px 0 #b8cce0;
     }
     .chip.active, button.primary {
       background: var(--btn);
       border-color: var(--btn);
       color: var(--btn-ink);
+      box-shadow: 0 4px 0 #d9650a;
     }
-    button.ghost { background: transparent; }
+    button.ghost { background: #fff; }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
     .stats { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 14px; }
-    .stat b { display: block; font-size: 26px; line-height: 1.1; }
+    .stat b { display: block; font-size: 28px; line-height: 1.1; color: var(--red); font-weight: 800; }
     .stat span { color: var(--muted); font-size: 13px; }
     .stage-card {
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 16px;
+      background: #fff;
+      border: 3px solid var(--line);
+      border-radius: 24px;
       overflow: hidden;
+      box-shadow: 0 8px 0 #d4e4f7;
     }
     canvas {
       display: block;
@@ -66,34 +85,129 @@
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      padding: 12px 14px;
-      border-top: 1px solid var(--line);
+      padding: 14px 16px;
+      border-top: 3px solid var(--line);
+      background: #f4f8fc;
     }
     .status {
       margin: 0;
       flex: 1;
       min-width: 200px;
       color: var(--muted);
-      font-size: 14px;
+      font-size: 15px;
+      font-weight: 600;
       line-height: 1.45;
     }
     .formula {
       display: none;
       margin-top: 12px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: #eef8f1;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: #e8fff5;
+      border: 3px solid #8fd9b5;
       color: var(--ok);
       font-size: 16px;
+      font-weight: 700;
     }
     .formula.show { display: block; }
-    .formula.warn { background: #fff4e0; color: var(--warn); }
+    .formula.warn { background: #fff8e6; border-color: #ffd166; color: #c98a00; }
+
+    .car-deco {
+      position: fixed;
+      width: 72px;
+      height: 44px;
+      pointer-events: none;
+      opacity: 0.9;
+      z-index: 0;
+    }
+    .car-deco-tl { top: 12px; left: 10px; }
+    .car-deco-tr { top: 16px; right: 12px; transform: scaleX(-1); }
+    .car-deco-bl { bottom: 14px; left: 12px; opacity: 0.55; }
+    .car-deco-br { bottom: 18px; right: 14px; opacity: 0.55; transform: scaleX(-1); }
+    .wrap { position: relative; z-index: 1; }
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .page-head h1 { margin: 0; flex: 1; min-width: 200px; }
+    .title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 2px solid var(--line);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .road-line {
+      height: 8px;
+      margin: 0 0 14px;
+      border-radius: 999px;
+      background:
+        repeating-linear-gradient(90deg, #ffd166 0 14px, transparent 14px 24px),
+        #4a5568;
+      border: 2px solid #4a5568;
+    }
+    a.home {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    a.home svg, .title-badge svg { display: block; flex-shrink: 0; }
+    button.primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stage-card { position: relative; }
+    .stage-card::before,
+    .stage-card::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2c3e50;
+      border: 3px solid #94a3b8;
+      z-index: 2;
+    }
+    .stage-card::before { left: 10px; bottom: 10px; }
+    .stage-card::after { right: 10px; bottom: 10px; }
+    .stat {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 8px 12px;
+      min-width: 72px;
+    }
   </style>
 </head>
 <body>
+  <svg class="car-deco car-deco-tl" viewBox="0 0 72 44" aria-hidden="true"><rect x="8" y="18" width="56" height="14" rx="4" fill="#1e88e5"/><path d="M16 18l8-10h22l10 10z" fill="#1e88e5"/><circle cx="22" cy="33" r="6" fill="#2c3e50"/><circle cx="50" cy="33" r="6" fill="#2c3e50"/><rect x="26" y="10" width="12" height="7" rx="1" fill="#dbeafe"/><rect x="40" y="10" width="12" height="7" rx="1" fill="#dbeafe"/></svg>
+  <svg class="car-deco car-deco-tr" viewBox="0 0 72 44" aria-hidden="true"><rect x="6" y="16" width="50" height="16" rx="3" fill="#ff7a1a"/><rect x="10" y="8" width="28" height="10" rx="2" fill="#ff9a4d"/><circle cx="20" cy="34" r="6" fill="#2c3e50"/><circle cx="48" cy="34" r="6" fill="#2c3e50"/><rect x="40" y="18" width="12" height="8" fill="#ffd166"/></svg>
+  <svg class="car-deco car-deco-bl" viewBox="0 0 72 44" aria-hidden="true"><rect x="10" y="20" width="48" height="12" rx="3" fill="#2bb673"/><path d="M18 20l6-8h20l8 8z" fill="#2bb673"/><circle cx="24" cy="33" r="5" fill="#2c3e50"/><circle cx="48" cy="33" r="5" fill="#2c3e50"/></svg>
+  <svg class="car-deco car-deco-br" viewBox="0 0 72 44" aria-hidden="true"><rect x="8" y="14" width="40" height="18" rx="2" fill="#5b8def"/><rect x="48" y="20" width="16" height="12" fill="#ffd166"/><circle cx="20" cy="34" r="5" fill="#2c3e50"/><circle cx="40" cy="34" r="5" fill="#2c3e50"/><circle cx="56" cy="34" r="5" fill="#2c3e50"/></svg>
   <div class="wrap">
-    <p style="margin:0 0 8px"><a href="index.html" style="color:#7a6454;font-size:14px">全部练习</a></p>
-    <h1>找房子：观察与匹配</h1>
+    <p style="margin:0 0 8px">
+      <a class="home" href="index.html">
+        <svg width="28" height="18" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#ff7a1a"/><path d="M14 16l7-9h20l9 9z" fill="#ff7a1a"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
+        回家园
+      </a>
+    </p>
+    <div class="page-head">
+      <h1>找房子：观察与匹配</h1>
+      <span class="title-badge">
+        <svg width="28" height="18" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#2bb673"/><path d="M14 16l7-9h20l9 9z" fill="#2bb673"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
+        玩法还是找房子
+      </span>
+    </div>
+    <div class="road-line" aria-hidden="true"></div>
     <p class="lead">左边是小动物想住的房子。从动物拖一条线到右边对应的房子上，也可以先点动物再点房子。</p>
 
     <div class="row" id="levels"></div>
@@ -106,7 +220,10 @@
     <div class="stage-card">
       <canvas id="stage" width="980" height="560"></canvas>
       <div class="bar">
-        <button type="button" class="primary" id="btnCheck">检查</button>
+        <button type="button" class="primary" id="btnCheck">
+          <svg width="28" height="18" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#fff"/><path d="M14 16l7-9h20l9 9z" fill="#fff"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
+          检查
+        </button>
         <button type="button" class="ghost" id="btnReset">再连一次</button>
         <button type="button" class="ghost" id="btnNext">下一关</button>
         <p class="status" id="status">从左边的小动物拖一条线，连到它要住的房子。</p>
@@ -128,7 +245,7 @@
             { id: "bear", name: "小熊", kind: "bear", text: "黄色房顶，蓝色窗户" },
           ],
           houses: [
-            { id: "h1", roof: "#e24b4a", wall: "#fff6e8", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h1", roof: "#e53935", wall: "#fff6e8", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
             { id: "h2", roof: "#3b7ec9", wall: "#fff6e8", window: "#3d9a5f", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
             { id: "h3", roof: "#3d9a5f", wall: "#fff6e8", window: "#f0c230", door: "#c45c2a", doorShape: "round", chimney: false, windows: 2 },
             { id: "h4", roof: "#e0b125", wall: "#fff6e8", window: "#4a8fd4", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
@@ -145,8 +262,8 @@
             { id: "bear", name: "小熊", kind: "bear", text: "蓝色房顶，一扇窗，有烟囱" },
           ],
           houses: [
-            { id: "h1", roof: "#e24b4a", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
-            { id: "h2", roof: "#e24b4a", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 1 },
+            { id: "h1", roof: "#e53935", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h2", roof: "#e53935", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 1 },
             { id: "h3", roof: "#3b7ec9", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
             { id: "h4", roof: "#3b7ec9", wall: "#f8ecda", window: "#8ec6e8", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 1 },
           ],
@@ -162,10 +279,10 @@
             { id: "bear", name: "小熊", kind: "bear", text: "白墙，红色房顶，蓝色窗户" },
           ],
           houses: [
-            { id: "h1", roof: "#e24b4a", wall: "#fffaf3", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
-            { id: "h2", roof: "#e24b4a", wall: "#f4c4c0", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
-            { id: "h3", roof: "#3b7ec9", wall: "#fffaf3", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
-            { id: "h4", roof: "#e24b4a", wall: "#fffaf3", window: "#4a8fd4", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+            { id: "h1", roof: "#e53935", wall: "#f4f8fc", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h2", roof: "#e53935", wall: "#f4c4c0", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: true, windows: 2 },
+            { id: "h3", roof: "#3b7ec9", wall: "#f4f8fc", window: "#f0c230", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
+            { id: "h4", roof: "#e53935", wall: "#f4f8fc", window: "#4a8fd4", door: "#8b5a2b", doorShape: "rect", chimney: false, windows: 2 },
           ],
           answer: { rabbit: "h1", cat: "h2", dog: "h3", bear: "h4" },
         },
@@ -298,10 +415,10 @@
           ctx.beginPath(); ctx.arc(11, -14, 6, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(0, -2, 15, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = "#3a2a1a";
+        ctx.fillStyle = "#2c3e50";
         ctx.beginPath(); ctx.arc(-5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(5, -4, 1.6, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = "#3a2a1a";
+        ctx.strokeStyle = "#2c3e50";
         ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(0, 2, 4, 0.15, Math.PI - 0.15); ctx.stroke();
         ctx.restore();
@@ -334,7 +451,7 @@
         ctx.fillStyle = h.window;
         if (h.windows === 1) {
           ctx.fillRect(x - 11, wallY + 10, 22, 16);
-          ctx.strokeStyle = "#fffaf3";
+          ctx.strokeStyle = "#f4f8fc";
           ctx.strokeRect(x - 11, wallY + 10, 22, 16);
           ctx.beginPath(); ctx.moveTo(x, wallY + 10); ctx.lineTo(x, wallY + 26); ctx.stroke();
         } else {
@@ -368,20 +485,20 @@
 
       function linkColor(animalId) {
         if (!state.checked) return "#c56a16";
-        return state.results[animalId] ? "#2f8a56" : "#e24b4a";
+        return state.results[animalId] ? "#2bb673" : "#ff7a1a";
       }
 
       function render() {
         const lv = level();
         const lay = layout();
         ctx.clearRect(0, 0, cssW, cssH);
-        ctx.fillStyle = "#fffaf3";
+        ctx.fillStyle = "#f4f8fc";
         ctx.fillRect(0, 0, cssW, cssH);
 
-        ctx.fillStyle = "#3a2a1a";
+        ctx.fillStyle = "#2c3e50";
         ctx.font = "bold 16px Microsoft YaHei, sans-serif";
         ctx.fillText(lv.title, 20, 30);
-        ctx.fillStyle = "#7a6454";
+        ctx.fillStyle = "#6b7c8f";
         ctx.font = "13px Microsoft YaHei, sans-serif";
         ctx.fillText("小动物的家", 20, 48);
         ctx.textAlign = "right";
@@ -398,32 +515,32 @@
         });
         if (state.drag) {
           const a = lay.animals.find(function (x) { return x.id === state.drag.id; });
-          if (a) drawLink(a.port, { x: state.drag.x, y: state.drag.y }, "#e24b4a", 4);
+          if (a) drawLink(a.port, { x: state.drag.x, y: state.drag.y }, "#ff7a1a", 4);
         }
 
         lay.animals.forEach(function (box) {
           const on = state.selected === box.id || (state.drag && state.drag.id === box.id);
           const ok = state.checked && state.results[box.id] === true;
           const bad = state.checked && state.results[box.id] === false;
-          ctx.fillStyle = on ? "#fff1e0" : "#fbf3e8";
+          ctx.fillStyle = on ? "#e3f0ff" : "#f4f8fc";
           roundRect(box.x, box.y, box.w, box.h, 12);
           ctx.fill();
-          ctx.strokeStyle = bad ? "#e24b4a" : ok ? "#2f8a56" : on ? "#e24b4a" : "#ead7c2";
+          ctx.strokeStyle = bad ? "#ff7a1a" : ok ? "#2bb673" : on ? "#ff7a1a" : "#c5d5e8";
           ctx.lineWidth = on || bad || ok ? 2 : 1;
           roundRect(box.x, box.y, box.w, box.h, 12);
           ctx.stroke();
           drawAnimalFace(box.data.kind, box.x + 36, box.y + box.h / 2 + 4);
-          ctx.fillStyle = "#3a2a1a";
+          ctx.fillStyle = "#2c3e50";
           ctx.font = "bold 15px Microsoft YaHei, sans-serif";
           ctx.fillText(box.data.name, box.x + 62, box.y + 28);
-          ctx.fillStyle = "#7a6454";
+          ctx.fillStyle = "#6b7c8f";
           ctx.font = "13px Microsoft YaHei, sans-serif";
           wrapText(box.data.text, box.x + 62, box.y + 50, box.w - 86, 18);
-          ctx.fillStyle = on ? "#e24b4a" : "#cbb396";
+          ctx.fillStyle = on ? "#ff7a1a" : "#9ec5ea";
           ctx.beginPath();
           ctx.arc(box.port.x, box.port.y, 8, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#fffaf3";
+          ctx.fillStyle = "#f4f8fc";
           ctx.beginPath();
           ctx.arc(box.port.x, box.port.y, 3.5, 0, Math.PI * 2);
           ctx.fill();
@@ -434,19 +551,19 @@
           const hover = state.drag && hitHouse(state.drag, lay) === box.id;
           const ok = state.checked && takenBy && state.results[takenBy];
           const bad = state.checked && takenBy && state.results[takenBy] === false;
-          ctx.fillStyle = hover ? "#fff1e0" : "#fbf3e8";
+          ctx.fillStyle = hover ? "#e3f0ff" : "#f4f8fc";
           roundRect(box.x, box.y, box.w, box.h, 12);
           ctx.fill();
-          ctx.strokeStyle = bad ? "#e24b4a" : ok ? "#2f8a56" : hover ? "#e24b4a" : "#ead7c2";
+          ctx.strokeStyle = bad ? "#ff7a1a" : ok ? "#2bb673" : hover ? "#ff7a1a" : "#c5d5e8";
           ctx.lineWidth = hover || ok || bad ? 2 : 1;
           roundRect(box.x, box.y, box.w, box.h, 12);
           ctx.stroke();
           drawHouse(box.data, box);
-          ctx.fillStyle = hover ? "#e24b4a" : "#cbb396";
+          ctx.fillStyle = hover ? "#ff7a1a" : "#9ec5ea";
           ctx.beginPath();
           ctx.arc(box.port.x, box.port.y, 8, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#fffaf3";
+          ctx.fillStyle = "#f4f8fc";
           ctx.beginPath();
           ctx.arc(box.port.x, box.port.y, 3.5, 0, Math.PI * 2);
           ctx.fill();
