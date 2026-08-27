@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>平均分：分苹果</title>
+  <style>
+    :root {
+      --bg: #fff4e5;
+      --paper: #fffaf3;
+      --ink: #3a2a1a;
+      --muted: #7a6454;
+      --line: #ead7c2;
+      --red: #e24b4a;
+      --green: #2f8a56;
+      --btn: #e24b4a;
+      --btn-ink: #fff;
+      --ok: #2f8a56;
+      --warn: #c56a16;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; }
+    .lead { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .chip, button, .stepper {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .chip, button { padding: 7px 14px; }
+    .chip.active, button.primary {
+      background: var(--btn);
+      border-color: var(--btn);
+      color: var(--btn-ink);
+    }
+    button.ghost { background: transparent; }
+    button:disabled, .chip:disabled { opacity: 0.45; cursor: not-allowed; }
+    .stepper {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      gap: 2px;
+    }
+    .stepper span { min-width: 76px; text-align: center; font-size: 14px; }
+    .stepper button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      background: #f3e6d6;
+    }
+    .stats { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 520px;
+      touch-action: none;
+      cursor: default;
+    }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+    }
+    .status {
+      margin: 0;
+      flex: 1;
+      min-width: 200px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .formula {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #eef8f1;
+      color: var(--ok);
+      font-size: 16px;
+    }
+    .formula.show { display: block; }
+    .formula.warn { background: #fff4e0; color: var(--warn); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>平均分：分苹果</h1>
+    <p class="lead">把苹果一人一个地发给每个小朋友。每人分到的一样多；分不完的叫做余数。</p>
+
+    <div class="row" id="presets"></div>
+    <div class="row">
+      <div class="stepper">
+        <button type="button" id="nMinus" aria-label="少一个苹果">−</button>
+        <span id="nLabel">苹果 10</span>
+        <button type="button" id="nPlus" aria-label="多一个苹果">+</button>
+      </div>
+      <div class="stepper">
+        <button type="button" id="mMinus" aria-label="少一份">−</button>
+        <span id="mLabel">分成 3 份</span>
+        <button type="button" id="mPlus" aria-label="多一份">+</button>
+      </div>
+      <button type="button" class="chip active" id="btnKids">小朋友</button>
+      <button type="button" class="chip" id="btnPlates">盘子</button>
+      <button type="button" class="chip active" id="btnWatch">看动画</button>
+      <button type="button" class="chip" id="btnDrag">自己分</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="statN">10</b><span>苹果</span></div>
+      <div class="stat"><b id="statM">3</b><span>分成几份</span></div>
+      <div class="stat"><b id="statEach">?</b><span>每人</span></div>
+      <div class="stat"><b id="statRem">?</b><span>余数</span></div>
+    </div>
+
+    <div class="stage-card">
+      <canvas id="stage" width="980" height="520"></canvas>
+      <div class="bar">
+        <button type="button" class="primary" id="btnMain">分发</button>
+        <button type="button" class="ghost" id="btnReset">再来一次</button>
+        <p class="status" id="status">点「分发」，苹果会一人一个地飞进盘子。</p>
+      </div>
+    </div>
+    <div class="formula" id="formula"></div>
+  </div>
+
+  <script>
+    (function () {
+      const PRESETS = [
+        { label: "6 ÷ 3", n: 6, m: 3 },
+        { label: "8 ÷ 4", n: 8, m: 4 },
+        { label: "10 ÷ 3 有余数", n: 10, m: 3 },
+        { label: "12 ÷ 5 有余数", n: 12, m: 5 },
+        { label: "15 ÷ 3", n: 15, m: 3 },
+      ];
+      const N_MIN = 2, N_MAX = 18, M_MIN = 2, M_MAX = 6;
+
+      const canvas = document.getElementById("stage");
+      const ctx = canvas.getContext("2d");
+      const statusEl = document.getElementById("status");
+      const formulaEl = document.getElementById("formula");
+      const btnMain = document.getElementById("btnMain");
+
+      const state = {
+        n: 10,
+        m: 3,
+        mode: "watch",
+        receiver: "kids",
+        apples: [],
+        playing: false,
+        done: false,
+        check: null,
+        status: "点「分发」，苹果会一人一个地飞进盘子。",
+        hoverPlate: null,
+        drag: null,
+        fly: null,
+      };
+      let cancelToken = 0;
+      let cssW = 980;
+      let cssH = 520;
+
+      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+      function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function quotient() { return Math.floor(state.n / state.m); }
+      function remainder() { return state.n % state.m; }
+      function nameOf(i) {
+        return state.receiver === "kids" ? "小朋友 " + (i + 1) : "盘子 " + (i + 1);
+      }
+
+      function resetApples() {
+        state.apples = Array.from({ length: state.n }, (_, id) => ({ id: id, plate: null }));
+        state.playing = false;
+        state.done = false;
+        state.check = null;
+        state.hoverPlate = null;
+        state.drag = null;
+        state.fly = null;
+        state.status = state.mode === "watch"
+          ? "点「分发」，苹果会一人一个地飞进盘子。"
+          : "把苹果拖进盘子。每个盘子一样多，才叫平均分。";
+        cancelToken += 1;
+        render();
+      }
+
+      function counts() {
+        const arr = Array.from({ length: state.m }, function () { return 0; });
+        state.apples.forEach(function (a) {
+          if (a.plate != null && !(state.drag && state.drag.id === a.id)) arr[a.plate] += 1;
+        });
+        return arr;
+      }
+
+      function leftover() {
+        return state.apples.filter(function (a) {
+          return a.plate == null && !(state.drag && state.drag.id === a.id) && !(state.fly && state.fly.id === a.id);
+        }).length;
+      }
+
+      function layout() {
+        const pad = 24;
+        const pileTop = 18;
+        const recY = 210;
+        const plateY = cssH - 78;
+        const colW = (cssW - pad * 2) / state.m;
+        const receivers = [];
+        for (let i = 0; i < state.m; i++) {
+          const cx = pad + colW * (i + 0.5);
+          receivers.push({
+            i: i,
+            x: pad + colW * i + 6,
+            y: recY,
+            w: colW - 12,
+            h: cssH - recY - 16,
+            cx: cx,
+            kidY: recY + 36,
+            plateY: plateY,
+          });
+        }
+
+        const hidden = {};
+        if (state.fly) hidden[state.fly.id] = true;
+        if (state.drag) hidden[state.drag.id] = true;
+
+        const pile = state.apples.filter(function (a) { return a.plate == null && !hidden[a.id]; });
+        const pilePos = {};
+        const maxCols = Math.min(12, Math.max(6, pile.length));
+        const gap = 38;
+        const startX = cssW / 2 - ((Math.min(pile.length, maxCols) - 1) * gap) / 2;
+        pile.forEach(function (a, idx) {
+          const col = idx % maxCols;
+          const row = Math.floor(idx / maxCols);
+          pilePos[a.id] = { x: startX + col * gap, y: pileTop + 52 + row * 40, r: 18 };
+        });
+
+        const platePos = {};
+        receivers.forEach(function (rec) {
+          const held = state.apples.filter(function (a) { return a.plate === rec.i && !hidden[a.id]; });
+          const cols = held.length > 6 ? 4 : 3;
+          held.forEach(function (a, idx) {
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            const totalW = (Math.min(held.length, cols) - 1) * 26;
+            platePos[a.id] = {
+              x: rec.cx - totalW / 2 + col * 26,
+              y: rec.plateY - 48 - row * 28,
+              r: 14,
+            };
+          });
+        });
+
+        return { receivers: receivers, pilePos: pilePos, platePos: platePos, pileTop: pileTop };
+      }
+
+      function posOf(id, lay) {
+        if (state.fly && state.fly.id === id) {
+          const t = easeOut(state.fly.t);
+          const x = lerp(state.fly.from.x, state.fly.to.x, t);
+          const y = lerp(state.fly.from.y, state.fly.to.y, t) - Math.sin(state.fly.t * Math.PI) * 70;
+          return { x: x, y: y, r: 18 };
+        }
+        if (state.drag && state.drag.id === id) {
+          return { x: state.drag.x, y: state.drag.y, r: 18 };
+        }
+        return lay.pilePos[id] || lay.platePos[id] || null;
+      }
+
+      function drawApple(x, y, r) {
+        const s = r / 16;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(s, s);
+        ctx.strokeStyle = "#5a3a22";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -9);
+        ctx.quadraticCurveTo(2, -15, 6, -17);
+        ctx.stroke();
+        ctx.fillStyle = "#3d9a5f";
+        ctx.beginPath();
+        ctx.ellipse(8, -13, 7, 3.4, -0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#e24b4a";
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.bezierCurveTo(-15, -8, -17, 9, -7, 15);
+        ctx.bezierCurveTo(-3, 19, 3, 19, 7, 15);
+        ctx.bezierCurveTo(17, 9, 15, -8, 0, -8);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.28)";
+        ctx.beginPath();
+        ctx.ellipse(-5, -1, 2.8, 4.6, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawKid(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = "#f3d2b3";
+        ctx.beginPath();
+        ctx.arc(0, -28, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#c9a07e";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.fillStyle = "#5b8fd6";
+        ctx.beginPath();
+        ctx.roundRect(-12, -14, 24, 22, 6);
+        ctx.fill();
+        ctx.strokeStyle = "#3a2a1a";
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-6, 8);
+        ctx.lineTo(-8, 20);
+        ctx.moveTo(6, 8);
+        ctx.lineTo(8, 20);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawPlate(x, y, w, hot) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = hot ? "#f7e1b8" : "#efe0cc";
+        ctx.beginPath();
+        ctx.ellipse(0, 6, w * 0.42, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = hot ? "#e24b4a" : "#cbb396";
+        ctx.lineWidth = hot ? 2.4 : 1.6;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, w * 0.42, 11, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        cssW = rect.width;
+        cssH = rect.height;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        render();
+      }
+
+      function render() {
+        const lay = layout();
+        ctx.clearRect(0, 0, cssW, cssH);
+
+        ctx.fillStyle = "#fffaf3";
+        ctx.fillRect(0, 0, cssW, cssH);
+
+        ctx.fillStyle = "#f6ead8";
+        roundRect(16, 12, cssW - 32, 118, 12);
+        ctx.fill();
+        ctx.fillStyle = "#7a6454";
+        ctx.font = "13px Microsoft YaHei, sans-serif";
+        ctx.fillText(leftover() === 0 ? "苹果已经全部分出去了" : "还没分的苹果", 28, 34);
+        if ((state.done || state.check === "ok") && remainder() > 0) {
+          ctx.fillText("余数留在这里", cssW - 118, 34);
+        }
+
+        lay.receivers.forEach(function (rec) {
+          const hot = state.hoverPlate === rec.i;
+          ctx.fillStyle = hot ? "#fff1e0" : "#fbf3e8";
+          roundRect(rec.x, rec.y, rec.w, rec.h, 12);
+          ctx.fill();
+          ctx.strokeStyle = hot ? "#e24b4a" : "#ead7c2";
+          ctx.lineWidth = hot ? 2 : 1;
+          roundRect(rec.x, rec.y, rec.w, rec.h, 12);
+          ctx.stroke();
+
+          ctx.fillStyle = "#3a2a1a";
+          ctx.font = "bold 13px Microsoft YaHei, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(nameOf(rec.i), rec.cx, rec.y + 22);
+          if (state.receiver === "kids") drawKid(rec.cx, rec.kidY + 18);
+          drawPlate(rec.cx, rec.plateY, rec.w, hot);
+          const nHere = counts()[rec.i];
+          ctx.fillStyle = "#7a6454";
+          ctx.font = "13px Microsoft YaHei, sans-serif";
+          ctx.fillText(nHere + " 个", rec.cx, rec.plateY + 24);
+          ctx.textAlign = "left";
+        });
+
+        state.apples.forEach(function (a) {
+          const p = posOf(a.id, lay);
+          if (p) drawApple(p.x, p.y, p.r);
+        });
+
+        syncChrome();
+      }
+
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else {
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+      }
+
+      function syncChrome() {
+        document.getElementById("nLabel").textContent = "苹果 " + state.n;
+        document.getElementById("mLabel").textContent = "分成 " + state.m + " 份";
+        document.getElementById("statN").textContent = String(state.n);
+        document.getElementById("statM").textContent = String(state.m);
+        const show = (state.mode === "watch" && state.done) || state.check === "ok";
+        document.getElementById("statEach").textContent = show ? String(quotient()) : "?";
+        document.getElementById("statRem").textContent = show ? String(remainder()) : "?";
+        statusEl.textContent = state.status;
+        btnMain.textContent = state.mode === "watch" ? "分发" : "检查";
+        btnMain.disabled = state.playing;
+        document.getElementById("nMinus").disabled = state.playing || state.n <= N_MIN;
+        document.getElementById("nPlus").disabled = state.playing || state.n >= N_MAX;
+        document.getElementById("mMinus").disabled = state.playing || state.m <= M_MIN;
+        document.getElementById("mPlus").disabled = state.playing || state.m >= M_MAX;
+        document.getElementById("btnKids").classList.toggle("active", state.receiver === "kids");
+        document.getElementById("btnPlates").classList.toggle("active", state.receiver === "plates");
+        document.getElementById("btnWatch").classList.toggle("active", state.mode === "watch");
+        document.getElementById("btnDrag").classList.toggle("active", state.mode === "drag");
+        document.querySelectorAll("#presets .chip").forEach(function (el, i) {
+          const p = PRESETS[i];
+          el.classList.toggle("active", state.n === p.n && state.m === p.m);
+        });
+        const q = quotient();
+        const r = remainder();
+        if (state.mode === "watch" && state.done) {
+          formulaEl.className = "formula show";
+          formulaEl.textContent = r
+            ? state.n + " ÷ " + state.m + " = " + q + " 余 " + r + "　　验算：" + state.m + " × " + q + " + " + r + " = " + state.n
+            : state.n + " ÷ " + state.m + " = " + q + "　　验算：" + state.m + " × " + q + " = " + state.n;
+        } else if (state.check === "ok") {
+          formulaEl.className = "formula show";
+          formulaEl.textContent = "对了！每人 " + q + " 个" + (r ? "，余 " + r + " 个。" : "，正好分完。");
+        } else if (state.check === "too-many") {
+          formulaEl.className = "formula show warn";
+          formulaEl.textContent = "有的盘子拿多了。平均分时每人最多 " + q + " 个，多的请拖回去。";
+        } else if (state.check === "can-round") {
+          formulaEl.className = "formula show warn";
+          formulaEl.textContent = "还可以再分一轮：每个盘子再放 1 个。";
+        } else if (state.check === "uneven") {
+          formulaEl.className = "formula show warn";
+          formulaEl.textContent = "还没有平均。每个盘子里的苹果个数要相同。";
+        } else {
+          formulaEl.className = "formula";
+          formulaEl.textContent = "";
+        }
+      }
+
+      function toLocal(ev) {
+        const box = canvas.getBoundingClientRect();
+        return { x: ev.clientX - box.left, y: ev.clientY - box.top };
+      }
+
+      function hitApple(pt, lay) {
+        let found = null;
+        state.apples.forEach(function (a) {
+          const p = posOf(a.id, lay);
+          if (!p) return;
+          const dx = pt.x - p.x, dy = pt.y - p.y;
+          if (dx * dx + dy * dy <= (p.r + 4) * (p.r + 4)) found = a;
+        });
+        return found;
+      }
+
+      function hitPlate(pt, lay) {
+        for (let i = 0; i < lay.receivers.length; i++) {
+          const rec = lay.receivers[i];
+          if (pt.x >= rec.x && pt.x <= rec.x + rec.w && pt.y >= rec.y && pt.y <= rec.y + rec.h) return rec.i;
+        }
+        return null;
+      }
+
+      function sleep(ms, token) {
+        return new Promise(function (resolve) {
+          const t0 = performance.now();
+          function tick(now) {
+            if (token !== cancelToken || now - t0 >= ms) resolve();
+            else requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        });
+      }
+
+      function flyTo(id, plate, token) {
+        const lay0 = layout();
+        const from = posOf(id, lay0);
+        const rec = lay0.receivers[plate];
+        const to = { x: rec.cx, y: rec.plateY - 36 };
+        if (!from) {
+          state.apples[id].plate = plate;
+          return Promise.resolve();
+        }
+        state.fly = { id: id, from: from, to: to, t: 0 };
+        const dist = Math.hypot(to.x - from.x, to.y - from.y);
+        const dur = Math.min(620, 360 + dist * 0.35);
+        const t0 = performance.now();
+        return new Promise(function (resolve) {
+          function step(now) {
+            if (token !== cancelToken) {
+              state.fly = null;
+              resolve();
+              return;
+            }
+            state.fly.t = Math.min(1, (now - t0) / dur);
+            render();
+            if (state.fly.t < 1) requestAnimationFrame(step);
+            else {
+              state.apples[id].plate = plate;
+              state.fly = null;
+              render();
+              resolve();
+            }
+          }
+          requestAnimationFrame(step);
+        });
+      }
+
+      async function playDeal() {
+        if (state.playing || state.mode !== "watch") return;
+        const token = ++cancelToken;
+        state.apples = Array.from({ length: state.n }, (_, id) => ({ id: id, plate: null }));
+        state.playing = true;
+        state.done = false;
+        state.check = null;
+        state.status = "开始分：每一轮，每人先拿 1 个。";
+        render();
+        await sleep(260, token);
+        let next = 0;
+        const rounds = quotient();
+        for (let round = 0; round < rounds; round++) {
+          if (token !== cancelToken) return;
+          state.status = "第 " + (round + 1) + " 轮：一人一个";
+          render();
+          for (let p = 0; p < state.m; p++) {
+            if (token !== cancelToken) return;
+            state.status = "第 " + (round + 1) + " 轮：发给" + nameOf(p);
+            render();
+            await flyTo(next, p, token);
+            next += 1;
+            await sleep(70, token);
+          }
+          state.status = "第 " + (round + 1) + " 轮结束，每人 " + (round + 1) + " 个";
+          render();
+          await sleep(380, token);
+        }
+        if (token !== cancelToken) return;
+        if (remainder() > 0) state.status = "还剩 " + remainder() + " 个，不够再分一轮。这就是余数。";
+        else state.status = "正好分完，没有剩余。";
+        state.done = true;
+        state.playing = false;
+        render();
+      }
+
+      function judge() {
+        const c = counts();
+        const q = quotient();
+        const left = leftover();
+        const even = c.every(function (n) { return n === c[0]; });
+        if (c.some(function (n) { return n > q; })) return "too-many";
+        if (left >= state.m) return "can-round";
+        if (!even || c[0] !== q || left !== remainder()) return "uneven";
+        return "ok";
+      }
+
+      canvas.addEventListener("pointerdown", function (ev) {
+        if (state.mode !== "drag" || state.playing) return;
+        const pt = toLocal(ev);
+        const lay = layout();
+        const apple = hitApple(pt, lay);
+        if (!apple) return;
+        canvas.setPointerCapture(ev.pointerId);
+        state.drag = { id: apple.id, x: pt.x, y: pt.y };
+        state.check = null;
+        state.hoverPlate = hitPlate(pt, lay);
+        canvas.style.cursor = "grabbing";
+        render();
+      });
+      canvas.addEventListener("pointermove", function (ev) {
+        if (!state.drag) return;
+        const pt = toLocal(ev);
+        state.drag.x = pt.x;
+        state.drag.y = pt.y;
+        state.hoverPlate = hitPlate(pt, layout());
+        render();
+      });
+      function endDrag(ev) {
+        if (!state.drag) return;
+        const pt = toLocal(ev);
+        const target = hitPlate(pt, layout());
+        state.apples[state.drag.id].plate = target;
+        state.drag = null;
+        state.hoverPlate = null;
+        canvas.style.cursor = "default";
+        render();
+      }
+      canvas.addEventListener("pointerup", endDrag);
+      canvas.addEventListener("pointercancel", endDrag);
+
+      document.getElementById("presets").innerHTML = PRESETS.map(function (p) {
+        return '<button type="button" class="chip">' + p.label + "</button>";
+      }).join("");
+      document.querySelectorAll("#presets .chip").forEach(function (el, i) {
+        el.addEventListener("click", function () {
+          if (state.playing) return;
+          state.n = PRESETS[i].n;
+          state.m = PRESETS[i].m;
+          resetApples();
+        });
+      });
+      document.getElementById("nMinus").onclick = function () { if (!state.playing) { state.n = clamp(state.n - 1, N_MIN, N_MAX); resetApples(); } };
+      document.getElementById("nPlus").onclick = function () { if (!state.playing) { state.n = clamp(state.n + 1, N_MIN, N_MAX); resetApples(); } };
+      document.getElementById("mMinus").onclick = function () { if (!state.playing) { state.m = clamp(state.m - 1, M_MIN, M_MAX); resetApples(); } };
+      document.getElementById("mPlus").onclick = function () { if (!state.playing) { state.m = clamp(state.m + 1, M_MIN, M_MAX); resetApples(); } };
+      document.getElementById("btnKids").onclick = function () { state.receiver = "kids"; render(); };
+      document.getElementById("btnPlates").onclick = function () { state.receiver = "plates"; render(); };
+      document.getElementById("btnWatch").onclick = function () { if (state.playing) return; state.mode = "watch"; resetApples(); };
+      document.getElementById("btnDrag").onclick = function () { if (state.playing) return; state.mode = "drag"; resetApples(); };
+      btnMain.onclick = function () {
+        if (state.mode === "watch") playDeal();
+        else {
+          state.check = judge();
+          if (state.check === "ok") {
+            state.status = remainder()
+              ? "对了：每人 " + quotient() + " 个，余 " + remainder() + " 个。"
+              : "对了：每人 " + quotient() + " 个，正好分完。";
+          } else if (state.check === "too-many") {
+            state.status = "有的盘子拿多了。多的要放回去。";
+          } else if (state.check === "can-round") {
+            state.status = "还可以再分一轮，一人一个。";
+          } else {
+            state.status = "还没有平均，每个盘子的数量要相同。";
+          }
+          render();
+        }
+      };
+      document.getElementById("btnReset").onclick = function () { resetApples(); };
+
+      window.addEventListener("resize", resize);
+      resetApples();
+      resize();
+    })();
+  </script>
+</body>
+</html>
