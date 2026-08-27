@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>儿童互动练习</title>
+  <style>
+    :root {
+      --bg: #fff4e5;
+      --paper: #fffaf3;
+      --ink: #3a2a1a;
+      --muted: #7a6454;
+      --line: #ead7c2;
+      --red: #e24b4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 24px 16px 40px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 28px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    h2 { margin: 28px 0 12px; font-size: 18px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    a.card {
+      display: block;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 16px 18px;
+      text-decoration: none;
+      color: inherit;
+    }
+    a.card:hover { border-color: var(--red); }
+    .tag {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    a.card strong { display: block; font-size: 20px; margin-bottom: 6px; }
+    a.card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>儿童互动练习</h1>
+    <p class="lead">在浏览器里打开就能玩。3～5 岁练数数和简单逻辑；大一点可以玩分苹果和找房子。</p>
+
+    <h2>3～5 岁 · 思维与数学</h2>
+    <div class="grid">
+      <a class="card" href="count.html">
+        <span class="tag">计数</span>
+        <strong>数一数</strong>
+        <p>看图点数字，练习 1 到 5。</p>
+      </a>
+      <a class="card" href="compare.html">
+        <span class="tag">比较</span>
+        <strong>谁更多</strong>
+        <p>比一比两边谁多，还是一样多。</p>
+      </a>
+      <a class="card" href="sort.html">
+        <span class="tag">分类</span>
+        <strong>分一分</strong>
+        <p>按颜色把小球拖进篮子。</p>
+      </a>
+      <a class="card" href="pattern.html">
+        <span class="tag">规律</span>
+        <strong>找规律</strong>
+        <p>看前面的排列，选出下一个。</p>
+      </a>
+    </div>
+
+    <h2>6 岁以上 · 观察与运算</h2>
+    <div class="grid">
+      <a class="card" href="apple-share.html">
+        <span class="tag">平均分</span>
+        <strong>分苹果</strong>
+        <p>一人一个地分，认识余数。</p>
+      </a>
+      <a class="card" href="find-house.html">
+        <span class="tag">观察</span>
+        <strong>找房子</strong>
+        <p>对照描述，连线找到正确的家。</p>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

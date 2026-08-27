@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分一分</title>
+  <style>
+    :root {
+      --bg: #fff4e5; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
+      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    a.home { color: var(--muted); font-size: 14px; }
+    h1 { margin: 8px 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active, button.primary { background: var(--red); border-color: var(--red); color: var(--btn-ink); }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .ask { margin: 0 0 12px; font-size: 20px; font-weight: 700; }
+    .pile {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-height: 72px;
+      padding: 12px;
+      background: #f6ead8;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .ball {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(58,42,26,.15);
+      cursor: grab;
+      touch-action: none;
+      flex-shrink: 0;
+    }
+    .ball.ghost { opacity: 0; }
+    .baskets { display: grid; gap: 10px; }
+    .baskets.two { grid-template-columns: 1fr 1fr; }
+    .baskets.three { grid-template-columns: 1fr 1fr 1fr; }
+    .basket {
+      min-height: 120px;
+      border-radius: 12px;
+      border: 3px dashed var(--line);
+      padding: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+    }
+    .basket.hot { background: #fff1e0; }
+    .basket h3 { width: 100%; margin: 0 0 6px; font-size: 15px; text-align: center; }
+    .status { margin: 12px 0 0; color: var(--muted); min-height: 22px; }
+    .ghost-ball {
+      position: fixed;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9;
+      display: none;
+      border: 2px solid rgba(58,42,26,.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="home" href="index.html">全部练习</a>
+    <h1>分一分</h1>
+    <p class="lead">按颜色把小球拖进篮子。放错了会回到上面，再试一次。</p>
+    <div class="row">
+      <button type="button" class="chip active" id="easy">3 岁 · 两种颜色</button>
+      <button type="button" class="chip" id="hard">4～5 岁 · 三种颜色</button>
+      <button type="button" class="ghost" id="reset">再来一盘</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="left">0</b><span>还没分</span></div>
+      <div class="stat"><b id="done">0</b><span>完成盘数</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask">把红色放到红篮子，黄色放到黄篮子。</p>
+      <div class="pile" id="pile"></div>
+      <div class="baskets two" id="baskets"></div>
+      <p class="status" id="status">按住小球，拖到同颜色的篮子里。</p>
+    </div>
+  </div>
+  <div class="ghost-ball" id="ghost"></div>
+  <script>
+    (function () {
+      const COLORS = {
+        red: { name: "红", hex: "#e24b4a" },
+        yellow: { name: "黄", hex: "#e0b125" },
+        blue: { name: "蓝", hex: "#3b7ec9" },
+      };
+      const state = {
+        keys: ["red", "yellow"],
+        items: [],
+        drag: null,
+        done: 0,
+      };
+
+      function shuffle(a) {
+        const arr = a.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+      function deal() {
+        state.items = [];
+        const per = state.keys.length === 2 ? 3 : 3;
+        state.keys.forEach(function (k) {
+          for (let i = 0; i < per; i++) state.items.push({ id: k + "-" + i + "-" + Math.random(), color: k, place: "pile" });
+        });
+        state.items = shuffle(state.items);
+        const names = state.keys.map(function (k) { return COLORS[k].name; }).join("、");
+        document.querySelector(".ask").textContent = "按颜色分开：" + names + "。";
+        document.getElementById("status").textContent = "拖到颜色一样的篮子里。";
+        render();
+      }
+      function leftover() {
+        return state.items.filter(function (x) { return x.place === "pile"; }).length;
+      }
+      function render() {
+        const pile = document.getElementById("pile");
+        const baskets = document.getElementById("baskets");
+        pile.innerHTML = "";
+        baskets.className = "baskets " + (state.keys.length === 2 ? "two" : "three");
+        baskets.innerHTML = "";
+        state.keys.forEach(function (k) {
+          const box = document.createElement("div");
+          box.className = "basket";
+          box.dataset.color = k;
+          box.style.borderColor = COLORS[k].hex;
+          box.innerHTML = "<h3>" + COLORS[k].name + "篮子</h3>";
+          baskets.appendChild(box);
+        });
+        state.items.forEach(function (it) {
+          if (state.drag && state.drag.id === it.id) return;
+          const el = document.createElement("div");
+          el.className = "ball";
+          el.dataset.id = it.id;
+          el.style.background = COLORS[it.color].hex;
+          el.addEventListener("pointerdown", onDown);
+          if (it.place === "pile") pile.appendChild(el);
+          else {
+            const box = baskets.querySelector('[data-color="' + it.place + '"]');
+            if (box) box.appendChild(el);
+          }
+        });
+        document.getElementById("left").textContent = String(leftover());
+        document.getElementById("done").textContent = String(state.done);
+      }
+      function onDown(ev) {
+        ev.preventDefault();
+        const id = ev.currentTarget.dataset.id;
+        const it = state.items.find(function (x) { return x.id === id; });
+        if (!it) return;
+        ev.currentTarget.setPointerCapture(ev.pointerId);
+        ev.currentTarget.classList.add("ghost");
+        state.drag = { id: it.id, color: it.color, from: it.place };
+        const g = document.getElementById("ghost");
+        g.style.display = "block";
+        g.style.background = COLORS[it.color].hex;
+        moveGhost(ev.clientX, ev.clientY);
+      }
+      function moveGhost(x, y) {
+        const g = document.getElementById("ghost");
+        g.style.left = (x - 26) + "px";
+        g.style.top = (y - 26) + "px";
+      }
+      function basketAt(x, y) {
+        const nodes = document.querySelectorAll(".basket");
+        for (let i = 0; i < nodes.length; i++) {
+          const b = nodes[i].getBoundingClientRect();
+          if (x >= b.left && x <= b.right && y >= b.top && y <= b.bottom) return nodes[i].dataset.color;
+        }
+        return null;
+      }
+      window.addEventListener("pointermove", function (ev) {
+        if (!state.drag) return;
+        moveGhost(ev.clientX, ev.clientY);
+        document.querySelectorAll(".basket").forEach(function (el) {
+          el.classList.toggle("hot", el.dataset.color === basketAt(ev.clientX, ev.clientY));
+        });
+      });
+      window.addEventListener("pointerup", function (ev) {
+        if (!state.drag) return;
+        const target = basketAt(ev.clientX, ev.clientY);
+        const it = state.items.find(function (x) { return x.id === state.drag.id; });
+        document.getElementById("ghost").style.display = "none";
+        document.querySelectorAll(".basket").forEach(function (el) { el.classList.remove("hot"); });
+        if (target && target === it.color) {
+          it.place = target;
+          document.getElementById("status").textContent = "放对了！";
+        } else if (target) {
+          it.place = "pile";
+          document.getElementById("status").textContent = "这是" + COLORS[it.color].name + "色的，放到" + COLORS[it.color].name + "篮子里。";
+        } else {
+          it.place = "pile";
+        }
+        state.drag = null;
+        render();
+        if (leftover() === 0) {
+          state.done += 1;
+          document.getElementById("status").textContent = "全部分好了！真能干。";
+          document.getElementById("done").textContent = String(state.done);
+          setTimeout(deal, 1100);
+        }
+      });
+      document.getElementById("easy").onclick = function () {
+        state.keys = ["red", "yellow"];
+        this.classList.add("active");
+        document.getElementById("hard").classList.remove("active");
+        deal();
+      };
+      document.getElementById("hard").onclick = function () {
+        state.keys = ["red", "yellow", "blue"];
+        this.classList.add("active");
+        document.getElementById("easy").classList.remove("active");
+        deal();
+      };
+      document.getElementById("reset").onclick = deal;
+      deal();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>找规律</title>
+  <style>
+    :root {
+      --bg: #fff4e5; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
+      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    a.home { color: var(--muted); font-size: 14px; }
+    h1 { margin: 8px 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active { background: var(--red); border-color: var(--red); color: var(--btn-ink); }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 16px 20px;
+    }
+    .ask { margin: 0 0 16px; font-size: 20px; font-weight: 700; }
+    .seq {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      min-height: 90px;
+      padding: 12px;
+      background: #f6ead8;
+      border-radius: 12px;
+    }
+    .cell {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      border: 2px solid var(--line);
+    }
+    .cell.q { border-style: dashed; color: var(--muted); font-size: 28px; font-weight: 700; }
+    .shape { width: 40px; height: 40px; }
+    .choices { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 18px; }
+    .choice {
+      width: 88px;
+      height: 88px;
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      background: #fff;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .choice.ok { border-color: var(--ok); background: #eef8f1; }
+    .choice.bad { border-color: var(--red); background: #fdeeee; }
+    .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="home" href="index.html">全部练习</a>
+    <h1>找规律</h1>
+    <p class="lead">看前面几个是怎么排的，点出下一个应该是谁。</p>
+    <div class="row">
+      <button type="button" class="chip active" id="easy">3 岁 · 两种轮流</button>
+      <button type="button" class="chip" id="hard">4～5 岁 · 更长规律</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="q">1</b><span>第几题</span></div>
+      <div class="stat"><b id="ok">0</b><span>答对</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask">下一个是哪个？</p>
+      <div class="seq" id="seq"></div>
+      <div class="choices" id="choices"></div>
+      <p class="status" id="status">从左到右看，找一找重复的地方。</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const PALETTE = {
+        red: "#e24b4a",
+        yellow: "#e0b125",
+        blue: "#3b7ec9",
+        green: "#2f8a56",
+      };
+      const EASY = [
+        { shown: ["red", "blue", "red", "blue"], next: "red", pool: ["red", "blue", "yellow"] },
+        { shown: ["yellow", "yellow", "blue", "yellow"], next: "yellow", pool: ["yellow", "blue", "red"] },
+        { shown: ["circle", "square", "circle", "square"], next: "circle", pool: ["circle", "square", "tri"] },
+        { shown: ["green", "green", "red", "green"], next: "green", pool: ["green", "red", "blue"] },
+        { shown: ["blue", "red", "blue", "red"], next: "blue", pool: ["blue", "red", "yellow"] },
+      ];
+      const HARD = [
+        { shown: ["red", "blue", "yellow", "red", "blue"], next: "yellow", pool: ["yellow", "red", "blue"] },
+        { shown: ["red", "red", "blue", "blue", "red"], next: "red", pool: ["red", "blue", "yellow"] },
+        { shown: ["circle", "circle", "square", "circle", "circle"], next: "square", pool: ["square", "circle", "tri"] },
+        { shown: ["green", "yellow", "green", "yellow", "green"], next: "yellow", pool: ["yellow", "green", "red"] },
+        { shown: ["square", "circle", "circle", "square", "circle"], next: "circle", pool: ["circle", "square", "tri"] },
+      ];
+      const state = { hard: false, i: 0, correct: 0, q: 1, lock: false, item: null };
+
+      function shuffle(a) {
+        const arr = a.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+      function mark(kind) {
+        if (PALETTE[kind]) {
+          return '<div class="shape" style="border-radius:50%;background:' + PALETTE[kind] + '"></div>';
+        }
+        if (kind === "circle") return '<div class="shape" style="border-radius:50%;background:#3b7ec9"></div>';
+        if (kind === "square") return '<div class="shape" style="background:#e0b125"></div>';
+        return '<div class="shape" style="width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-bottom:36px solid #2f8a56"></div>';
+      }
+      function nextQ() {
+        state.lock = false;
+        const bank = state.hard ? HARD : EASY;
+        let n = Math.floor(Math.random() * bank.length);
+        if (state.item && bank[n] === state.item) n = (n + 1) % bank.length;
+        state.item = bank[n];
+        const seq = document.getElementById("seq");
+        seq.innerHTML = "";
+        state.item.shown.forEach(function (k) {
+          const c = document.createElement("div");
+          c.className = "cell";
+          c.innerHTML = mark(k);
+          seq.appendChild(c);
+        });
+        const q = document.createElement("div");
+        q.className = "cell q";
+        q.textContent = "?";
+        seq.appendChild(q);
+        const box = document.getElementById("choices");
+        box.innerHTML = "";
+        shuffle(state.item.pool).forEach(function (k) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "choice";
+          b.innerHTML = mark(k);
+          b.onclick = function () { pick(k, b); };
+          box.appendChild(b);
+        });
+        document.getElementById("q").textContent = String(state.q);
+        document.getElementById("ok").textContent = String(state.correct);
+        document.getElementById("status").textContent = "看一看，谁在重复出现。";
+      }
+      function pick(k, btn) {
+        if (state.lock) return;
+        if (k === state.item.next) {
+          state.lock = true;
+          btn.classList.add("ok");
+          state.correct += 1;
+          document.getElementById("ok").textContent = String(state.correct);
+          document.getElementById("status").textContent = "对了！就是这样排的。";
+          setTimeout(function () {
+            state.q += 1;
+            if (state.correct >= 8) {
+              state.correct = 0;
+              state.q = 1;
+              document.getElementById("status").textContent = "规律找得很准！再来一组。";
+            }
+            nextQ();
+          }, 900);
+        } else {
+          btn.classList.add("bad");
+          document.getElementById("status").textContent = "再看一遍前面几个，找重复的顺序。";
+          setTimeout(function () { btn.classList.remove("bad"); }, 450);
+        }
+      }
+      document.getElementById("easy").onclick = function () {
+        state.hard = false; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("hard").classList.remove("active");
+        nextQ();
+      };
+      document.getElementById("hard").onclick = function () {
+        state.hard = true; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("easy").classList.remove("active");
+        nextQ();
+      };
+      nextQ();
+    })();
+  </script>
+</body>
+</html>
