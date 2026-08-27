@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>排排队</title>
+  <style>
+    :root {
+      --bg: #fff4e5; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
+      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    a.home { color: var(--muted); font-size: 14px; }
+    h1 { margin: 8px 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active, button.primary { background: var(--red); border-color: var(--red); color: var(--btn-ink); }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 16px 20px;
+    }
+    .ask { margin: 0 0 14px; font-size: 20px; font-weight: 700; }
+    .slots {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-height: 90px;
+      margin-bottom: 16px;
+    }
+    .slot {
+      width: 72px;
+      height: 72px;
+      border-radius: 14px;
+      border: 2px dashed var(--line);
+      background: #f6ead8;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .slot.filled {
+      border-style: solid;
+      background: #fff;
+      color: var(--ink);
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .slot.hot { border-color: var(--red); background: #fff1e0; }
+    .pool {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-height: 80px;
+      padding: 12px;
+      background: #f6ead8;
+      border-radius: 12px;
+    }
+    .tile {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      cursor: grab;
+      touch-action: none;
+    }
+    .tile.ghost { opacity: 0.25; }
+    .ghost-tile {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+      z-index: 9;
+    }
+    .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="home" href="index.html">全部练习</a>
+    <h1>排排队</h1>
+    <p class="lead">把数字从小到大排好。可以点击空位再点数字，也可以拖进去。</p>
+    <div class="row">
+      <button type="button" class="chip active" id="easy">3 岁 · 1到3</button>
+      <button type="button" class="chip" id="hard">4～5 岁 · 1到5</button>
+      <button type="button" class="ghost" id="reset">再来一盘</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="done">0</b><span>完成盘数</span></div>
+      <div class="stat"><b id="left">0</b><span>还没排</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask">从小到大排队</p>
+      <div class="slots" id="slots"></div>
+      <div class="pool" id="pool"></div>
+      <p class="status" id="status">先找最小的数字，放到最左边。</p>
+    </div>
+  </div>
+  <div class="ghost-tile" id="ghost"></div>
+  <script>
+    (function () {
+      const state = {
+        max: 3,
+        slots: [],
+        pool: [],
+        selectedSlot: null,
+        drag: null,
+        done: 0,
+      };
+
+      function shuffle(a) {
+        const arr = a.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+      function deal() {
+        state.slots = Array.from({ length: state.max }, function () { return null; });
+        state.pool = shuffle(Array.from({ length: state.max }, function (_, i) { return i + 1; }));
+        state.selectedSlot = null;
+        state.drag = null;
+        document.getElementById("status").textContent = "先找最小的数字，放到最左边。";
+        render();
+      }
+      function leftover() {
+        return state.pool.length;
+      }
+      function render() {
+        const slots = document.getElementById("slots");
+        const pool = document.getElementById("pool");
+        slots.innerHTML = "";
+        pool.innerHTML = "";
+        state.slots.forEach(function (n, i) {
+          const el = document.createElement("button");
+          el.type = "button";
+          el.className = "slot" + (n != null ? " filled" : "") + (state.selectedSlot === i ? " hot" : "");
+          el.textContent = n != null ? String(n) : "第" + (i + 1) + "个";
+          el.onclick = function () { onSlotClick(i); };
+          slots.appendChild(el);
+        });
+        state.pool.forEach(function (n) {
+          const el = document.createElement("button");
+          el.type = "button";
+          el.className = "tile";
+          el.textContent = String(n);
+          el.dataset.n = String(n);
+          el.addEventListener("pointerdown", onDown);
+          el.onclick = function () { onTileClick(n); };
+          pool.appendChild(el);
+        });
+        document.getElementById("left").textContent = String(leftover());
+        document.getElementById("done").textContent = String(state.done);
+      }
+      function tryPlace(n, slotIndex) {
+        const expect = slotIndex + 1;
+        if (n === expect) {
+          state.slots[slotIndex] = n;
+          state.pool = state.pool.filter(function (x) { return x !== n; });
+          state.selectedSlot = null;
+          document.getElementById("status").textContent = "对了！继续排下一个。";
+          render();
+          if (leftover() === 0) {
+            state.done += 1;
+            document.getElementById("status").textContent = "排好了！从小到大：" + state.slots.join("、");
+            document.getElementById("done").textContent = String(state.done);
+            setTimeout(deal, 1100);
+          }
+        } else {
+          document.getElementById("status").textContent =
+            "第 " + (slotIndex + 1) + " 个位置应该放 " + expect + "。";
+          render();
+        }
+      }
+      function onSlotClick(i) {
+        if (state.slots[i] != null) return;
+        state.selectedSlot = i;
+        document.getElementById("status").textContent = "再点下面的数字放进来。";
+        render();
+      }
+      function onTileClick(n) {
+        if (state.drag) return;
+        if (state.selectedSlot == null) {
+          const empty = state.slots.findIndex(function (x) { return x == null; });
+          if (empty >= 0) tryPlace(n, empty);
+          return;
+        }
+        tryPlace(n, state.selectedSlot);
+      }
+      function onDown(ev) {
+        if (ev.pointerType === "mouse" && ev.button !== 0) return;
+        const n = Number(ev.currentTarget.dataset.n);
+        ev.currentTarget.setPointerCapture(ev.pointerId);
+        ev.currentTarget.classList.add("ghost");
+        state.drag = { n: n, moved: false, x0: ev.clientX, y0: ev.clientY };
+        const g = document.getElementById("ghost");
+        g.style.display = "grid";
+        g.textContent = String(n);
+        moveGhost(ev.clientX, ev.clientY);
+      }
+      function moveGhost(x, y) {
+        const g = document.getElementById("ghost");
+        g.style.left = (x - 32) + "px";
+        g.style.top = (y - 32) + "px";
+      }
+      function slotAt(x, y) {
+        const nodes = document.querySelectorAll(".slot");
+        for (let i = 0; i < nodes.length; i++) {
+          const b = nodes[i].getBoundingClientRect();
+          if (x >= b.left && x <= b.right && y >= b.top && y <= b.bottom) return i;
+        }
+        return null;
+      }
+      window.addEventListener("pointermove", function (ev) {
+        if (!state.drag) return;
+        if (Math.hypot(ev.clientX - state.drag.x0, ev.clientY - state.drag.y0) > 8) state.drag.moved = true;
+        moveGhost(ev.clientX, ev.clientY);
+        const idx = slotAt(ev.clientX, ev.clientY);
+        document.querySelectorAll(".slot").forEach(function (el, i) {
+          el.classList.toggle("hot", idx === i && state.slots[i] == null);
+        });
+      });
+      window.addEventListener("pointerup", function (ev) {
+        if (!state.drag) return;
+        const n = state.drag.n;
+        const moved = state.drag.moved;
+        const idx = slotAt(ev.clientX, ev.clientY);
+        document.getElementById("ghost").style.display = "none";
+        state.drag = null;
+        if (moved && idx != null && state.slots[idx] == null) tryPlace(n, idx);
+        else render();
+      });
+      document.getElementById("easy").onclick = function () {
+        state.max = 3; state.done = 0;
+        this.classList.add("active");
+        document.getElementById("hard").classList.remove("active");
+        deal();
+      };
+      document.getElementById("hard").onclick = function () {
+        state.max = 5; state.done = 0;
+        this.classList.add("active");
+        document.getElementById("easy").classList.remove("active");
+        deal();
+      };
+      document.getElementById("reset").onclick = deal;
+      deal();
+    })();
+  </script>
+</body>
+</html>

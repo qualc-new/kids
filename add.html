@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>凑一凑</title>
+  <style>
+    :root {
+      --bg: #fff4e5; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
+      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    a.home { color: var(--muted); font-size: 14px; }
+    h1 { margin: 8px 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active { background: var(--red); border-color: var(--red); color: var(--btn-ink); }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 16px 20px;
+    }
+    .ask { margin: 0 0 14px; font-size: 20px; font-weight: 700; }
+    .eq {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      min-height: 120px;
+      padding: 12px;
+      background: #f6ead8;
+      border-radius: 12px;
+    }
+    .group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      min-width: 70px;
+      padding: 8px;
+      background: #fffaf3;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
+    .op { font-size: 28px; font-weight: 700; color: var(--muted); }
+    .dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e24b4a;
+    }
+    .dot.blue { background: #3b7ec9; }
+    .nums { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    .num {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .num.ok { border-color: var(--ok); background: #eef8f1; }
+    .num.bad { border-color: var(--red); background: #fdeeee; }
+    .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="home" href="index.html">全部练习</a>
+    <h1>凑一凑</h1>
+    <p class="lead">左边两堆合在一起是几个？先数一数，再点答案。</p>
+    <div class="row">
+      <button type="button" class="chip active" id="easy">3 岁 · 合计到3</button>
+      <button type="button" class="chip" id="hard">4～5 岁 · 合计到5</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="q">1</b><span>第几题</span></div>
+      <div class="stat"><b id="ok">0</b><span>答对</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask">一共有几个？</p>
+      <div class="eq" id="eq"></div>
+      <div class="nums" id="nums"></div>
+      <p class="status" id="status">先数红的，再数蓝的，合起来。</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const WORDS = ["", "一", "两", "三", "四", "五"];
+      const state = { maxSum: 3, a: 1, b: 1, correct: 0, q: 1, lock: false };
+
+      function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function dots(n, cls) {
+        let html = '<div class="group">';
+        for (let i = 0; i < n; i++) html += '<div class="dot' + (cls || "") + '"></div>';
+        html += "</div>";
+        return html;
+      }
+      function nextQ() {
+        state.lock = false;
+        do {
+          state.a = rand(1, state.maxSum - 1);
+          state.b = rand(1, state.maxSum - state.a);
+        } while (state.a + state.b < 2);
+        const sum = state.a + state.b;
+        document.getElementById("eq").innerHTML =
+          dots(state.a, "") +
+          '<span class="op">+</span>' +
+          dots(state.b, " blue") +
+          '<span class="op">=</span>' +
+          '<span class="op">?</span>';
+        const box = document.getElementById("nums");
+        box.innerHTML = "";
+        const opts = [];
+        for (let i = 1; i <= state.maxSum; i++) opts.push(i);
+        if (opts.indexOf(sum) < 0) opts.push(sum);
+        opts.sort(function (x, y) { return x - y; });
+        opts.forEach(function (i) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "num";
+          b.textContent = String(i);
+          b.onclick = function () { pick(i, b, sum); };
+          box.appendChild(b);
+        });
+        document.getElementById("q").textContent = String(state.q);
+        document.getElementById("ok").textContent = String(state.correct);
+        document.getElementById("status").textContent =
+          "红的 " + state.a + " 个，蓝的 " + state.b + " 个，合起来几个？";
+      }
+      function pick(i, btn, sum) {
+        if (state.lock) return;
+        if (i === sum) {
+          state.lock = true;
+          btn.classList.add("ok");
+          state.correct += 1;
+          document.getElementById("ok").textContent = String(state.correct);
+          document.getElementById("status").textContent =
+            "对了！" + state.a + " + " + state.b + " = " + sum + "（一共" + WORDS[sum] + "个）";
+          setTimeout(function () {
+            state.q += 1;
+            if (state.correct >= 8) { state.correct = 0; state.q = 1; }
+            nextQ();
+          }, 1000);
+        } else {
+          btn.classList.add("bad");
+          document.getElementById("status").textContent = "再数一遍：一个一个点着数。";
+          setTimeout(function () { btn.classList.remove("bad"); }, 450);
+        }
+      }
+      document.getElementById("easy").onclick = function () {
+        state.maxSum = 3; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("hard").classList.remove("active");
+        nextQ();
+      };
+      document.getElementById("hard").onclick = function () {
+        state.maxSum = 5; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("easy").classList.remove("active");
+        nextQ();
+      };
+      nextQ();
+    })();
+  </script>
+</body>
+</html>

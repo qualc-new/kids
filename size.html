@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>谁更大</title>
+  <style>
+    :root {
+      --bg: #fff4e5; --paper: #fffaf3; --ink: #3a2a1a; --muted: #7a6454;
+      --line: #ead7c2; --red: #e24b4a; --ok: #2f8a56; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    a.home { color: var(--muted); font-size: 14px; }
+    h1 { margin: 8px 0 6px; font-size: 28px; }
+    .lead { margin: 0 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip, button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      cursor: pointer;
+      padding: 7px 14px;
+    }
+    .chip.active { background: var(--red); border-color: var(--red); color: var(--btn-ink); }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 16px 20px;
+    }
+    .ask { margin: 0 0 14px; font-size: 20px; font-weight: 700; }
+    .sides {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      min-height: 200px;
+    }
+    .side {
+      background: #f6ead8;
+      border-radius: 12px;
+      border: 3px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px;
+      cursor: pointer;
+    }
+    .side:hover { border-color: #e0b125; }
+    .side.ok { border-color: var(--ok); background: #eef8f1; }
+    .side.bad { border-color: var(--red); background: #fdeeee; }
+    .side h3 { margin: 0; font-size: 15px; }
+    .shape { display: block; }
+    .btns { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .btns button {
+      min-width: 120px;
+      height: 52px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      background: #fff;
+    }
+    .btns button.ok { border-color: var(--ok); background: #eef8f1; }
+    .btns button.bad { border-color: var(--red); background: #fdeeee; }
+    .status { margin: 14px 0 0; color: var(--muted); min-height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="home" href="index.html">全部练习</a>
+    <h1>谁更大</h1>
+    <p class="lead">看一看，点出更大的那个。也可以练「一样大」。</p>
+    <div class="row">
+      <button type="button" class="chip active" id="easy">3 岁 · 差得明显</button>
+      <button type="button" class="chip" id="hard">4～5 岁 · 含一样大</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="q">1</b><span>第几题</span></div>
+      <div class="stat"><b id="ok">0</b><span>答对</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask" id="ask">哪个更大？</p>
+      <div class="sides">
+        <div class="side" id="left" data-side="left"><h3>左边</h3></div>
+        <div class="side" id="right" data-side="right"><h3>右边</h3></div>
+      </div>
+      <div class="btns" id="btns"></div>
+      <p class="status" id="status">用眼睛比一比，谁占的地方更大。</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const COLORS = ["#e24b4a", "#3b7ec9", "#e0b125", "#2f8a56"];
+      const state = { hard: false, ans: "left", left: 90, right: 48, shape: "circle", color: COLORS[0], correct: 0, q: 1, lock: false };
+
+      function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+      function svg(size, shape, color) {
+        if (shape === "square") {
+          return '<svg class="shape" width="' + size + '" height="' + size + '" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="' + color + '"/></svg>';
+        }
+        if (shape === "tri") {
+          return '<svg class="shape" width="' + size + '" height="' + size + '" viewBox="0 0 100 100"><polygon points="50,12 88,86 12,86" fill="' + color + '"/></svg>';
+        }
+        return '<svg class="shape" width="' + size + '" height="' + size + '" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="' + color + '"/></svg>';
+      }
+      function nextQ() {
+        state.lock = false;
+        state.shape = ["circle", "square", "tri"][rand(0, 2)];
+        state.color = COLORS[rand(0, COLORS.length - 1)];
+        if (!state.hard) {
+          const big = rand(88, 110);
+          const small = rand(36, 52);
+          if (Math.random() < 0.5) {
+            state.left = big; state.right = small; state.ans = "left";
+          } else {
+            state.left = small; state.right = big; state.ans = "right";
+          }
+          document.getElementById("ask").textContent = "哪个更大？";
+        } else {
+          const mode = rand(0, 2);
+          if (mode === 0) {
+            const s = rand(60, 80);
+            state.left = s; state.right = s; state.ans = "same";
+            document.getElementById("ask").textContent = "哪个更大？还是一样大？";
+          } else {
+            const big = rand(86, 108);
+            const small = rand(42, 58);
+            if (Math.random() < 0.5) {
+              state.left = big; state.right = small; state.ans = "left";
+            } else {
+              state.left = small; state.right = big; state.ans = "right";
+            }
+            document.getElementById("ask").textContent = "哪个更大？还是一样大？";
+          }
+        }
+        const left = document.getElementById("left");
+        const right = document.getElementById("right");
+        left.className = "side";
+        right.className = "side";
+        left.innerHTML = "<h3>左边</h3>" + svg(state.left, state.shape, state.color);
+        right.innerHTML = "<h3>右边</h3>" + svg(state.right, state.shape, state.color);
+        document.getElementById("q").textContent = String(state.q);
+        document.getElementById("ok").textContent = String(state.correct);
+        document.getElementById("status").textContent = "点更大的一边，或点下面的按钮。";
+        drawBtns();
+      }
+      function drawBtns() {
+        const box = document.getElementById("btns");
+        const opts = [
+          { id: "left", label: "左边大" },
+          { id: "same", label: "一样大" },
+          { id: "right", label: "右边大" },
+        ];
+        const show = state.hard ? opts : opts.filter(function (o) { return o.id !== "same"; });
+        box.innerHTML = "";
+        show.forEach(function (o) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = o.label;
+          b.onclick = function () { pick(o.id, b); };
+          box.appendChild(b);
+        });
+      }
+      function pick(id, btn) {
+        if (state.lock) return;
+        const left = document.getElementById("left");
+        const right = document.getElementById("right");
+        if (id === state.ans) {
+          state.lock = true;
+          if (btn) btn.classList.add("ok");
+          if (id === "left") left.classList.add("ok");
+          if (id === "right") right.classList.add("ok");
+          if (id === "same") { left.classList.add("ok"); right.classList.add("ok"); }
+          state.correct += 1;
+          document.getElementById("ok").textContent = String(state.correct);
+          document.getElementById("status").textContent =
+            id === "same" ? "对了！两边一样大。" : "对了！这一边更大。";
+          setTimeout(function () {
+            state.q += 1;
+            if (state.correct >= 8) { state.correct = 0; state.q = 1; }
+            nextQ();
+          }, 900);
+        } else {
+          if (btn) btn.classList.add("bad");
+          if (id === "left") left.classList.add("bad");
+          if (id === "right") right.classList.add("bad");
+          document.getElementById("status").textContent = "再比一比，谁占的地方更大。";
+          setTimeout(function () {
+            if (btn) btn.classList.remove("bad");
+            left.classList.remove("bad");
+            right.classList.remove("bad");
+          }, 450);
+        }
+      }
+      document.getElementById("left").onclick = function () { if (!state.hard || state.ans !== "same") pick("left"); };
+      document.getElementById("right").onclick = function () { if (!state.hard || state.ans !== "same") pick("right"); };
+      document.getElementById("easy").onclick = function () {
+        state.hard = false; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("hard").classList.remove("active");
+        nextQ();
+      };
+      document.getElementById("hard").onclick = function () {
+        state.hard = true; state.correct = 0; state.q = 1;
+        this.classList.add("active");
+        document.getElementById("easy").classList.remove("active");
+        nextQ();
+      };
+      nextQ();
+    })();
+  </script>
+</body>
+</html>
