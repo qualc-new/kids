@@ -245,6 +245,7 @@
         left: 3,
         right: 1,
         ans: "left",
+        prevAns: "",
         correct: 0,
         q: 1,
         lock: false,
@@ -308,33 +309,61 @@
         }
         state.correct = 0;
         state.q = 1;
+        state.prevAns = "";
         document.querySelectorAll("#levels .chip").forEach(function (el) {
           el.classList.toggle("active", el.dataset.id === level.id);
         });
         syncCustomBox();
         nextQ();
       }
+      function pickAns(lo, hi) {
+        const opts = state.allowSame ? ["left", "right", "same"] : ["left", "right"];
+        let ans = opts[rand(0, opts.length - 1)];
+        let tries = 0;
+        while (ans === state.prevAns && tries < 8) {
+          ans = opts[rand(0, opts.length - 1)];
+          tries += 1;
+        }
+        return ans;
+      }
+      function genCounts(lo, hi, ans) {
+        const minGap = hi - lo >= 2 ? 2 : 1;
+        if (ans === "same") {
+          const n = rand(lo, hi);
+          return { left: n, right: n };
+        }
+        const maxGap = Math.max(minGap, Math.min(hi - lo, rand(3, 5)));
+        const gap = rand(minGap, maxGap);
+        if (ans === "left") {
+          const left = rand(lo + gap, hi);
+          return { left: left, right: left - gap };
+        }
+        const right = rand(lo + gap, hi);
+        return { left: right - gap, right: right };
+      }
       function nextQ() {
         state.lock = false;
         const lo = state.min;
         const hi = state.max;
-        if (!state.allowSame) {
-          state.left = rand(lo, hi);
-          do { state.right = rand(lo, hi); } while (Math.abs(state.left - state.right) < 2 && hi - lo >= 2);
-          if (state.left === state.right) {
-            state.right = state.left >= hi ? lo : state.left + 1;
-          }
-        } else {
-          const mode = rand(0, 2);
-          if (mode === 0) {
-            state.left = rand(lo, hi);
-            state.right = state.left;
-          } else {
-            state.left = rand(lo, hi);
-            do { state.right = rand(lo, hi); } while (state.right === state.left && hi > lo);
-          }
+        let ans = pickAns(lo, hi);
+        let pair = genCounts(lo, hi, ans);
+        let guard = 0;
+        while (guard < 12 && (
+          pair.left < lo || pair.right < lo ||
+          pair.left > hi || pair.right > hi ||
+          (ans === "same" && pair.left !== pair.right) ||
+          (ans === "left" && pair.left <= pair.right) ||
+          (ans === "right" && pair.right <= pair.left) ||
+          (!state.allowSame && Math.abs(pair.left - pair.right) < 2 && hi - lo >= 2)
+        )) {
+          ans = pickAns(lo, hi);
+          pair = genCounts(lo, hi, ans);
+          guard += 1;
         }
-        state.ans = state.left === state.right ? "same" : (state.left > state.right ? "left" : "right");
+        state.ans = ans;
+        state.prevAns = ans;
+        state.left = pair.left;
+        state.right = pair.right;
         dots(document.getElementById("leftDots"), state.left, "");
         dots(document.getElementById("rightDots"), state.right, " blue");
         document.getElementById("q").textContent = String(state.q);

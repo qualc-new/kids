@@ -198,8 +198,9 @@
       gap: 6px;
     }
     .stage-card { position: relative; }
-    .stage-card::before,
-    .stage-card::after {
+    .canvas-wrap { position: relative; }
+    .canvas-wrap::before,
+    .canvas-wrap::after {
       content: "";
       position: absolute;
       width: 18px;
@@ -208,9 +209,11 @@
       background: #2c3e50;
       border: 3px solid #94a3b8;
       z-index: 2;
+      bottom: 10px;
+      pointer-events: none;
     }
-    .stage-card::before { left: 10px; bottom: 10px; }
-    .stage-card::after { right: 10px; bottom: 10px; }
+    .canvas-wrap::before { left: 10px; }
+    .canvas-wrap::after { right: 10px; }
     .stat {
       background: #fff;
       border: 2px solid var(--line);
@@ -268,7 +271,9 @@
     </div>
 
     <div class="stage-card">
-      <canvas id="stage" width="980" height="520"></canvas>
+      <div class="canvas-wrap">
+        <canvas id="stage" width="980" height="520"></canvas>
+      </div>
       <div class="bar">
         <button type="button" class="primary" id="btnMain">
           <svg class="btn-ico" width="28" height="18" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#fff"/><path d="M14 16l7-9h20l9 9z" fill="#fff"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
@@ -463,7 +468,7 @@
         ctx.stroke();
         ctx.fillStyle = "#5b8fd6";
         ctx.beginPath();
-        ctx.roundRect(-12, -14, 24, 22, 6);
+        roundRectPath(-12, -14, 24, 22, 6);
         ctx.fill();
         ctx.strokeStyle = "#2c3e50";
         ctx.lineWidth = 2.2;
@@ -492,13 +497,31 @@
         ctx.restore();
       }
 
+      function roundRectPath(x, y, w, h, r) {
+        if (ctx.roundRect) {
+          ctx.roundRect(x, y, w, h, r);
+          return;
+        }
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
+
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        roundRectPath(x, y, w, h, r);
+      }
+
       function resize() {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        cssW = rect.width;
-        cssH = rect.height;
-        canvas.width = Math.round(rect.width * dpr);
-        canvas.height = Math.round(rect.height * dpr);
+        cssW = Math.max(rect.width || 0, 320);
+        cssH = Math.max(rect.height || 0, 400);
+        canvas.width = Math.max(1, Math.round(cssW * dpr));
+        canvas.height = Math.max(1, Math.round(cssH * dpr));
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         render();
       }
@@ -551,19 +574,6 @@
         syncChrome();
       }
 
-      function roundRect(x, y, w, h, r) {
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-        else {
-          ctx.moveTo(x + r, y);
-          ctx.arcTo(x + w, y, x + w, y + h, r);
-          ctx.arcTo(x + w, y + h, x, y + h, r);
-          ctx.arcTo(x, y + h, x, y, r);
-          ctx.arcTo(x, y, x + w, y, r);
-          ctx.closePath();
-        }
-      }
-
       function syncChrome() {
         document.getElementById("nLabel").textContent = "苹果 " + state.n;
         document.getElementById("mLabel").textContent = "分成 " + state.m + " 份";
@@ -574,10 +584,12 @@
         document.getElementById("statRem").textContent = show ? String(remainder()) : "?";
         statusEl.textContent = state.status;
         statusEl.classList.remove("ok", "bad");
-        if (state.check === "ok" || (state.mode === "watch" && state.done)) {
+        if (state.check === "ok") {
           statusEl.classList.add("ok");
         } else if (state.check && state.check !== "ok") {
           statusEl.classList.add("bad");
+        } else if (state.mode === "watch" && state.done) {
+          statusEl.classList.add("ok");
         }
         btnMain.querySelector("#btnMainLabel").textContent = state.mode === "watch" ? "分发" : "检查";
         btnMain.disabled = state.playing;
@@ -809,7 +821,7 @@
 
       window.addEventListener("resize", resize);
       resetApples();
-      resize();
+      requestAnimationFrame(resize);
     })();
   </script>
 </body>

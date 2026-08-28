@@ -203,6 +203,7 @@
         { shown: ["square", "circle", "circle", "square", "circle"], next: "circle", pool: ["circle", "square", "tri"] },
       ];
       const state = { hard: false, i: 0, correct: 0, q: 1, lock: false, item: null };
+      function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
       function setStatus(msg, kind) {
         const el = document.getElementById("status");
         el.textContent = msg;
@@ -230,8 +231,12 @@
       function nextQ() {
         state.lock = false;
         const bank = state.hard ? HARD : EASY;
-        let n = Math.floor(Math.random() * bank.length);
-        if (state.item && bank[n] === state.item) n = (n + 1) % bank.length;
+        let n = rand(0, bank.length - 1);
+        let tries = 0;
+        while (state.item && bank[n] === state.item && tries < 8) {
+          n = rand(0, bank.length - 1);
+          tries += 1;
+        }
         state.item = bank[n];
         const seq = document.getElementById("seq");
         seq.innerHTML = "";

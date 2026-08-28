@@ -212,7 +212,6 @@
         done: 0,
       };
 
-      function shuffle(a) {
       function setStatus(msg, kind) {
         const el = document.getElementById("status");
         el.textContent = msg;
@@ -220,6 +219,7 @@
         if (kind === "ok" || kind === "bad") el.classList.add(kind);
       }
 
+      function shuffle(a) {
         const arr = a.slice();
         for (let i = arr.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));

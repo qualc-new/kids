@@ -184,7 +184,7 @@
         { id: "star", name: "星星" },
       ];
       const COLORS = ["#ff7a1a", "#6bb6ff", "#ffd166", "#2bb673"];
-      const state = { hard: false, ans: "circle", correct: 0, q: 1, lock: false };
+      const state = { hard: false, ans: "circle", prevShape: "", correct: 0, q: 1, lock: false };
 
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
       function setStatus(msg, kind) {
@@ -218,7 +218,13 @@
       function nextQ() {
         state.lock = false;
         const pool = state.hard ? SHAPES : SHAPES.slice(0, 3);
-        const target = pool[rand(0, pool.length - 1)];
+        let target = pool[rand(0, pool.length - 1)];
+        let tries = 0;
+        while (target.id === state.prevShape && tries < 8) {
+          target = pool[rand(0, pool.length - 1)];
+          tries += 1;
+        }
+        state.prevShape = target.id;
         state.ans = target.id;
         const targetColor = COLORS[rand(0, COLORS.length - 1)];
         document.getElementById("ask").textContent = "找出" + target.name;
@@ -274,13 +280,13 @@
         }
       }
       document.getElementById("easy").onclick = function () {
-        state.hard = false; state.correct = 0; state.q = 1;
+        state.hard = false; state.correct = 0; state.q = 1; state.prevShape = "";
         this.classList.add("active");
         document.getElementById("hard").classList.remove("active");
         nextQ();
       };
       document.getElementById("hard").onclick = function () {
-        state.hard = true; state.correct = 0; state.q = 1;
+        state.hard = true; state.correct = 0; state.q = 1; state.prevShape = "";
         this.classList.add("active");
         document.getElementById("easy").classList.remove("active");
         nextQ();

@@ -239,6 +239,7 @@
         customMax: 15,
         n: 1,
         kind: 0,
+        prevN: 0,
         correct: 0,
         q: 1,
         lock: false,
@@ -304,6 +305,7 @@
         state.correct = 0;
         state.q = 1;
         state.n = state.min;
+        state.prevN = 0;
         document.querySelectorAll("#levels .chip").forEach(function (el) {
           el.classList.toggle("active", el.dataset.id === level.id);
         });
@@ -314,9 +316,14 @@
         state.lock = false;
         state.kind = rand(0, KINDS.length - 1);
         let n = rand(state.min, state.max);
-        if (n === state.n && state.max > state.min) {
-          n = n >= state.max ? state.min : n + 1;
+        if (n === state.prevN && state.max > state.min) {
+          const opts = [];
+          for (let i = state.min; i <= state.max; i++) {
+            if (i !== state.prevN) opts.push(i);
+          }
+          n = opts[rand(0, opts.length - 1)];
         }
+        state.prevN = n;
         state.n = n;
         const k = KINDS[state.kind];
         const many = state.n >= 8 || state.max - state.min >= 8;

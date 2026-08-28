@@ -256,6 +256,8 @@
         customSum: 12,
         a: 1,
         b: 1,
+        prevA: 0,
+        prevB: 0,
         correct: 0,
         q: 1,
         lock: false,
@@ -300,19 +302,36 @@
         }
         state.correct = 0;
         state.q = 1;
+        state.prevA = 0;
+        state.prevB = 0;
         document.querySelectorAll("#levels .chip").forEach(function (el) {
           el.classList.toggle("active", el.dataset.id === level.id);
         });
         syncCustomBox();
         nextQ();
       }
+      function genAddends(maxSum) {
+        const sum = rand(2, maxSum);
+        let a = rand(1, sum - 1);
+        let b = sum - a;
+        if (Math.random() < 0.5) {
+          const t = a; a = b; b = t;
+        }
+        return { a: a, b: b, sum: sum };
+      }
       function nextQ() {
         state.lock = false;
-        do {
-          state.a = rand(1, state.maxSum - 1);
-          state.b = rand(1, state.maxSum - state.a);
-        } while (state.a + state.b < 2);
-        const sum = state.a + state.b;
+        let pair = genAddends(state.maxSum);
+        let guard = 0;
+        while (guard < 12 && pair.a === state.prevA && pair.b === state.prevB) {
+          pair = genAddends(state.maxSum);
+          guard += 1;
+        }
+        state.a = pair.a;
+        state.b = pair.b;
+        state.prevA = pair.a;
+        state.prevB = pair.b;
+        const sum = pair.sum;
         const eq = document.getElementById("eq");
         eq.className = "eq" + (state.maxSum >= 12 ? " compact" : "");
         eq.innerHTML =
