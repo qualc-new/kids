@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>找规律</title>
   <style>
     :root {
@@ -10,6 +10,18 @@
       --line: #c5d5e8; --red: #ff7a1a; --ok: #2bb673; --btn-ink: #fff;
     }
     * { box-sizing: border-box; }
+    html, body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
     body {
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
@@ -66,6 +78,26 @@
       background: #fff;
       border: 3px solid var(--line);
     }
+    .seq.long {
+      gap: 6px;
+    }
+    .seq.long .cell {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border-width: 2px;
+    }
+    .seq.long .cell.q { font-size: 20px; }
+    .seq.long .shape { width: 28px; height: 28px; }
+    .seq.long .cell svg { width: 36px; height: 22px; }
+    .seq.longer .cell {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+    .seq.longer .cell.q { font-size: 16px; }
+    .seq.longer .shape { width: 22px; height: 22px; }
+    .seq.longer .cell svg { width: 30px; height: 18px; }
     .cell.q { border-style: dashed; color: var(--muted); font-size: 28px; font-weight: 700; }
     .shape { width: 40px; height: 40px; }
     .choices { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 18px; }
@@ -188,20 +220,26 @@
         blue: "#6bb6ff",
         green: "#2bb673",
       };
-      const EASY = [
-        { shown: ["red", "blue", "red", "blue"], next: "red", pool: ["red", "blue", "yellow"] },
-        { shown: ["yellow", "yellow", "blue", "yellow"], next: "yellow", pool: ["yellow", "blue", "red"] },
-        { shown: ["circle", "square", "circle", "square"], next: "circle", pool: ["circle", "square", "tri"] },
-        { shown: ["green", "green", "red", "green"], next: "green", pool: ["green", "red", "blue"] },
-        { shown: ["blue", "red", "blue", "red"], next: "blue", pool: ["blue", "red", "yellow"] },
+      const EASY_UNITS = [
+        { unit: ["red", "blue"], pool: ["red", "blue", "yellow"] },
+        { unit: ["yellow", "blue"], pool: ["yellow", "blue", "red"] },
+        { unit: ["circle", "square"], pool: ["circle", "square", "tri"] },
+        { unit: ["green", "red"], pool: ["green", "red", "blue"] },
+        { unit: ["blue", "red"], pool: ["blue", "red", "yellow"] },
+        { unit: ["yellow", "yellow", "blue"], pool: ["yellow", "blue", "red"] },
+        { unit: ["green", "green", "red"], pool: ["green", "red", "blue"] },
       ];
-      const HARD = [
-        { shown: ["red", "blue", "yellow", "red", "blue"], next: "yellow", pool: ["yellow", "red", "blue"] },
-        { shown: ["red", "red", "blue", "blue", "red"], next: "red", pool: ["red", "blue", "yellow"] },
-        { shown: ["circle", "circle", "square", "circle", "circle"], next: "square", pool: ["square", "circle", "tri"] },
-        { shown: ["green", "yellow", "green", "yellow", "green"], next: "yellow", pool: ["yellow", "green", "red"] },
-        { shown: ["square", "circle", "circle", "square", "circle"], next: "circle", pool: ["circle", "square", "tri"] },
+      const HARD_UNITS = [
+        { unit: ["red", "blue", "yellow"], pool: ["yellow", "red", "blue"] },
+        { unit: ["red", "red", "blue", "blue"], pool: ["red", "blue", "yellow"] },
+        { unit: ["circle", "circle", "square"], pool: ["square", "circle", "tri"] },
+        { unit: ["green", "yellow", "green", "yellow"], pool: ["yellow", "green", "red"] },
+        { unit: ["square", "circle", "circle"], pool: ["circle", "square", "tri"] },
+        { unit: ["red", "blue", "blue", "red"], pool: ["red", "blue", "yellow"] },
+        { unit: ["yellow", "green", "blue"], pool: ["yellow", "green", "blue"] },
       ];
+      const LEN_EASY = 9;
+      const LEN_HARD = 15;
       const state = { hard: false, i: 0, correct: 0, q: 1, lock: false, item: null };
       function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
       function setStatus(msg, kind) {
@@ -211,6 +249,16 @@
         if (kind === "ok" || kind === "bad") el.classList.add(kind);
       }
 
+      function buildItem(spec, shownLen) {
+        const shown = [];
+        for (let i = 0; i < shownLen; i++) shown.push(spec.unit[i % spec.unit.length]);
+        return {
+          shown: shown,
+          next: spec.unit[shownLen % spec.unit.length],
+          pool: spec.pool,
+          _key: spec.unit.join("-"),
+        };
+      }
 
       function shuffle(a) {
         const arr = a.slice();
@@ -230,15 +278,17 @@
       }
       function nextQ() {
         state.lock = false;
-        const bank = state.hard ? HARD : EASY;
+        const bank = state.hard ? HARD_UNITS : EASY_UNITS;
+        const shownLen = state.hard ? LEN_HARD : LEN_EASY;
         let n = rand(0, bank.length - 1);
         let tries = 0;
-        while (state.item && bank[n] === state.item && tries < 8) {
+        while (state.item && bank[n].unit.join("-") === state.item._key && tries < 8) {
           n = rand(0, bank.length - 1);
           tries += 1;
         }
-        state.item = bank[n];
+        state.item = buildItem(bank[n], shownLen);
         const seq = document.getElementById("seq");
+        seq.className = "seq long" + (shownLen >= 15 ? " longer" : "");
         seq.innerHTML = "";
         state.item.shown.forEach(function (k) {
           const c = document.createElement("div");

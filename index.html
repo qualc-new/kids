@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>儿童互动练习 · 入口列表</title>
   <style>
     :root {
@@ -18,6 +18,18 @@
       --road: #4a5568;
     }
     * { box-sizing: border-box; }
+    html, body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
     body {
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
@@ -107,7 +119,7 @@
     .list a {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 22px;
       padding: 14px 16px;
       text-decoration: none;
       color: inherit;
@@ -152,7 +164,7 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
+      gap: 14px;
       margin-bottom: 4px;
     }
     .title-row strong { font-size: 18px; font-weight: 800; }

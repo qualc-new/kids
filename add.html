@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>凑一凑</title>
   <style>
     :root {
@@ -10,6 +10,18 @@
       --line: #c5d5e8; --red: #ff7a1a; --ok: #2bb673; --btn-ink: #fff;
     }
     * { box-sizing: border-box; }
+    html, body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
     body {
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>排排队</title>
   <style>
     :root {
@@ -10,6 +10,18 @@
       --line: #c5d5e8; --red: #ff7a1a; --ok: #2bb673; --btn-ink: #fff;
     }
     * { box-sizing: border-box; }
+    html, body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+    input, textarea {
+      -webkit-user-select: text;
+      user-select: text;
+      touch-action: auto;
+    }
     body {
       margin: 0;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
@@ -427,19 +439,33 @@
         if (ev.pointerType === "mouse" && ev.button !== 0) return;
         ev.preventDefault();
         const n = Number(ev.currentTarget.dataset.n);
+        const rect = ev.currentTarget.getBoundingClientRect();
         ev.currentTarget.setPointerCapture(ev.pointerId);
         ev.currentTarget.classList.add("ghost");
-        state.drag = { n: n, moved: false, x0: ev.clientX, y0: ev.clientY };
+        state.drag = {
+          n: n,
+          moved: false,
+          x0: ev.clientX,
+          y0: ev.clientY,
+          ox: ev.clientX - rect.left,
+          oy: ev.clientY - rect.top,
+          w: rect.width,
+          h: rect.height,
+        };
         const g = document.getElementById("ghost");
         g.style.display = "grid";
+        g.style.width = rect.width + "px";
+        g.style.height = rect.height + "px";
+        g.style.fontSize = window.getComputedStyle(ev.currentTarget).fontSize;
         g.textContent = String(n);
         moveGhost(ev.clientX, ev.clientY);
       }
       function moveGhost(x, y) {
         const g = document.getElementById("ghost");
-        const half = count() >= 8 ? 24 : 32;
-        g.style.left = (x - half) + "px";
-        g.style.top = (y - half) + "px";
+        const ox = state.drag ? state.drag.ox : g.offsetWidth / 2;
+        const oy = state.drag ? state.drag.oy : g.offsetHeight / 2;
+        g.style.left = (x - ox) + "px";
+        g.style.top = (y - oy) + "px";
       }
       function slotAt(x, y) {
         const nodes = document.querySelectorAll(".slot");
