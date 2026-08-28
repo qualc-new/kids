@@ -67,8 +67,15 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .ball.ghost { opacity: 0; }
+    .stage, .pile, .basket, .ghost-ball {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
     .baskets { display: grid; gap: 10px; }
     .baskets.two { grid-template-columns: 1fr 1fr; }
     .baskets.three { grid-template-columns: 1fr 1fr 1fr; }
@@ -310,6 +317,9 @@
         document.querySelectorAll(".basket").forEach(function (el) {
           el.classList.toggle("hot", el.dataset.color === basketAt(ev.clientX, ev.clientY));
         });
+      });
+      document.addEventListener("selectstart", function (ev) {
+        if (state.drag) ev.preventDefault();
       });
       window.addEventListener("pointerup", function (ev) {
         if (!state.drag) return;

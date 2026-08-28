@@ -46,6 +46,11 @@
       padding: 18px 16px 20px;
     }
     .ask { margin: 0 0 14px; font-size: 20px; font-weight: 700; }
+    .slots, .pool, .slot, .ghost-tile, .stage {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
     .slots {
       display: flex;
       justify-content: center;
@@ -93,6 +98,8 @@
       font-weight: 700;
       cursor: grab;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .slots.many .slot, .pool.many .tile, .ghost-tile.many {
       width: 48px;
@@ -418,6 +425,7 @@
       }
       function onDown(ev) {
         if (ev.pointerType === "mouse" && ev.button !== 0) return;
+        ev.preventDefault();
         const n = Number(ev.currentTarget.dataset.n);
         ev.currentTarget.setPointerCapture(ev.pointerId);
         ev.currentTarget.classList.add("ghost");
@@ -449,6 +457,9 @@
         document.querySelectorAll(".slot").forEach(function (el, i) {
           el.classList.toggle("hot", idx === i && state.slots[i] == null);
         });
+      });
+      document.addEventListener("selectstart", function (ev) {
+        if (state.drag) ev.preventDefault();
       });
       window.addEventListener("pointerup", function (ev) {
         if (!state.drag) return;

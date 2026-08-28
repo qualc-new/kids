@@ -95,6 +95,13 @@
       height: 520px;
       touch-action: none;
       cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .stage-card, .canvas-wrap, .bar {
+      -webkit-user-select: none;
+      user-select: none;
     }
     .bar {
       display: flex;
@@ -752,6 +759,7 @@
         const lay = layout();
         const apple = hitApple(pt, lay);
         if (!apple) return;
+        ev.preventDefault();
         canvas.setPointerCapture(ev.pointerId);
         state.drag = { id: apple.id, x: pt.x, y: pt.y };
         state.check = null;
@@ -766,6 +774,9 @@
         state.drag.y = pt.y;
         state.hoverPlate = hitPlate(pt, layout());
         render();
+      });
+      document.addEventListener("selectstart", function (ev) {
+        if (state.drag) ev.preventDefault();
       });
       function endDrag(ev) {
         if (!state.drag) return;

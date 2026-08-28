@@ -79,6 +79,13 @@
       height: 560px;
       touch-action: none;
       cursor: default;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .stage-card, .bar {
+      -webkit-user-select: none;
+      user-select: none;
     }
     .bar {
       display: flex;
@@ -645,6 +652,7 @@
           }
           return;
         }
+        ev.preventDefault();
         canvas.setPointerCapture(ev.pointerId);
         state.drag = { id: aid, x: pt.x, y: pt.y, startX: pt.x, startY: pt.y, moved: false };
         state.selected = aid;
@@ -658,6 +666,9 @@
         state.drag.x = pt.x;
         state.drag.y = pt.y;
         render();
+      });
+      document.addEventListener("selectstart", function (ev) {
+        if (state.drag) ev.preventDefault();
       });
       function endDrag(ev) {
         if (!state.drag) return;
