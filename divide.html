@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>分割图形</title>
+  <style>
+    :root {
+      --bg: #ffffff; --paper: #f4f8fc; --ink: #2c3e50; --muted: #6b7c8f;
+      --line: #c5d5e8; --red: #ff7a1a; --ok: #2bb673; --btn-ink: #fff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+      -webkit-text-size-adjust: 100%; touch-action: manipulation;
+    }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 6%, #e3f0ff 0, transparent 26%),
+        radial-gradient(circle at 92% 10%, #dff0ff 0, transparent 24%),
+        radial-gradient(circle at 80% 95%, #fff3c9 0, transparent 28%),
+        var(--bg);
+      padding: 20px 16px 32px;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; position: relative; z-index: 1; }
+    a.home {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 999px; background: #fff;
+      border: 2px solid var(--line); color: var(--red);
+      font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+    h1 { margin: 8px 0 6px; font-size: 28px; font-weight: 800; color: var(--red); letter-spacing: 0.5px; }
+    .road-line {
+      height: 7px; margin: 0 0 12px; border-radius: 999px;
+      background: repeating-linear-gradient(90deg, #ffd166 0 12px, transparent 12px 22px), #4a5568;
+      border: 2px solid #4a5568;
+    }
+    .lead { margin: 0 0 14px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip {
+      border: 3px solid var(--line); background: #fff; color: var(--ink);
+      border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer;
+      padding: 9px 16px; box-shadow: 0 4px 0 #b8cce0;
+    }
+    .chip.active { background: var(--red); border-color: var(--red); color: var(--btn-ink); box-shadow: 0 4px 0 #d9650a; }
+    .chip:active { transform: translateY(2px); box-shadow: 0 2px 0 #b8cce0; }
+    .stats { display: flex; gap: 20px; margin: 8px 0 14px; }
+    .stat b { display: block; font-size: 26px; color: var(--red); font-weight: 800; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stage {
+      background: #fff; border: 3px solid var(--line); border-radius: 24px;
+      padding: 18px 16px 28px; box-shadow: 0 8px 0 #d4e4f7; position: relative;
+    }
+    .stage::before, .stage::after {
+      content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+      background: #2c3e50; border: 3px solid #94a3b8; z-index: 2; bottom: 8px;
+    }
+    .stage::before { left: 8px; }
+    .stage::after { right: 8px; }
+    .ask { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+    .board { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .left { flex: 1.2; min-width: 240px; }
+    .right {
+      flex: 1; min-width: 160px; background: var(--paper);
+      border: 2px solid var(--line); border-radius: 16px; padding: 12px;
+    }
+    canvas { display: block; margin: 0 auto; touch-action: none; cursor: crosshair; background: #fff; border-radius: 12px; width: min(100%, 260px); height: auto; }
+    .hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
+    .label { display: block; text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+    .pieces { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 180px; }
+    .pieces.rect { flex-direction: row; justify-content: center; }
+    button {
+      border: 3px solid var(--line); background: #fff; color: var(--ink);
+      border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer;
+      padding: 9px 16px; box-shadow: 0 4px 0 #b8cce0;
+    }
+    button.primary { background: var(--red); border-color: var(--red); color: var(--btn-ink); box-shadow: 0 4px 0 #d9650a; }
+    button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 #b8cce0; }
+    .bar { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .status {
+      margin: 14px 0 0; font-size: 15px; font-weight: 600; min-height: 22px;
+      padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; color: var(--muted);
+    }
+    .status.ok { color: #187a4c; background: #d8f5e5; border-color: #2bb673; font-weight: 800; }
+    .status.bad { color: #c62828; background: #fde8e8; border-color: #e53935; font-weight: 800; }
+    .car-deco { position: fixed; width: 64px; height: 40px; pointer-events: none; opacity: 0.85; z-index: 0; }
+    .car-deco-tl { top: 10px; left: 8px; }
+    .car-deco-tr { top: 14px; right: 10px; transform: scaleX(-1); }
+  </style>
+</head>
+<body>
+  <svg class="car-deco car-deco-tl" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#1e88e5"/><path d="M14 16l7-9h20l9 9z" fill="#1e88e5"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg>
+  <svg class="car-deco car-deco-tr" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="14" width="44" height="16" rx="3" fill="#ff7a1a"/><rect x="12" y="8" width="22" height="8" rx="2" fill="#ff9a4d"/><circle cx="18" cy="32" r="5" fill="#2c3e50"/><circle cx="40" cy="32" r="5" fill="#2c3e50"/><rect x="48" y="18" width="10" height="8" fill="#ffd166"/></svg>
+  <div class="wrap">
+    <a class="home" href="index.html"><svg width="26" height="16" viewBox="0 0 64 40" aria-hidden="true"><rect x="6" y="16" width="52" height="14" rx="5" fill="#ff7a1a"/><path d="M14 16l7-9h20l9 9z" fill="#ff7a1a"/><circle cx="20" cy="31" r="5" fill="#2c3e50"/><circle cx="44" cy="31" r="5" fill="#2c3e50"/></svg> 回家园</a>
+    <h1>分割图形</h1>
+    <div class="road-line" aria-hidden="true"></div>
+    <p class="lead" id="lead">先选难度。简单：画 1 条线分成 2 块；挑战：画 2 条线分成 3 块。</p>
+    <div class="row" id="levels"></div>
+    <div class="stats">
+      <div class="stat"><b id="q">1</b><span>第几题</span></div>
+      <div class="stat"><b id="ok">0</b><span>答对</span></div>
+    </div>
+    <div class="stage">
+      <p class="ask" id="ask">画出 1 条线</p>
+      <div class="board">
+        <div class="left">
+          <canvas id="cut" width="260" height="260"></canvas>
+          <p class="hint" id="hint">已画 0 / 1 条线</p>
+        </div>
+        <div class="right">
+          <span class="label" id="piecesLabel">要分成这样</span>
+          <div class="pieces" id="pieces"></div>
+        </div>
+      </div>
+      <div class="bar">
+        <button type="button" id="clear">重画</button>
+        <button type="button" class="primary" id="check">完成</button>
+        <button type="button" id="next">下一题</button>
+      </div>
+      <p class="status" id="status">对照右边，想一想线该横着画、竖着画，还是斜着画。</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      /** 简单：1 条线 → 2 块；挑战：2 条平行线 → 3 块 */
+      const LEVELS = [
+        {
+          id: "easy",
+          label: "简单 · 画 1 条线",
+          need: 1,
+          lead: "在左边图形上画出 1 条线，把它分成和右边一样的 2 块。",
+          puzzles: [
+            { kind: "square", mode: "vert", name: "绿色方块", color: "#4ade80", hint: "试着从上到下竖着画一条线" },
+            { kind: "rect", mode: "horiz", name: "紫色长方形", color: "#a78bfa", hint: "试着横着画一条线" },
+            { kind: "circle", mode: "vert", name: "红色圆", color: "#f87171", hint: "试着竖着画一条线，像切开苹果" },
+            { kind: "triangle", mode: "horiz", name: "橙色三角", color: "#fb923c", hint: "试着横着画一条线" },
+          ],
+        },
+        {
+          id: "hard",
+          label: "挑战 · 画 2 条线",
+          need: 2,
+          lead: "在左边图形上画出 2 条线，把它分成和右边一样的 3 块。",
+          puzzles: [
+            { kind: "square", mode: "diag", name: "绿色方块", color: "#4ade80", hint: "试着斜着画两条平行线" },
+            { kind: "triangle", mode: "horiz", name: "橙色三角", color: "#fb923c", hint: "试着横着画两条线" },
+            { kind: "rect", mode: "vert", name: "紫色长方形", color: "#a78bfa", hint: "试着竖着画两条线" },
+            { kind: "circle", mode: "horiz", name: "红色圆", color: "#f87171", hint: "试着横着画两条线" },
+          ],
+        },
+      ];
+      const canvas = document.getElementById("cut");
+      const ctx = canvas.getContext("2d");
+      const state = {
+        levelId: "easy",
+        i: 0,
+        lines: [],
+        drawing: null,
+        correct: 0,
+        solved: [],
+      };
+
+      function level() {
+        return LEVELS.find(function (item) { return item.id === state.levelId; }) || LEVELS[0];
+      }
+      function puzzles() { return level().puzzles; }
+      function need() { return level().need; }
+      function puzzle() { return puzzles()[state.i]; }
+
+      function setStatus(msg, kind) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("ok", "bad");
+        if (kind === "ok" || kind === "bad") el.classList.add(kind);
+      }
+      function dist(a, b) {
+        var dx = a.x - b.x, dy = a.y - b.y;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+      function angleDeg(line) {
+        var deg = Math.abs(Math.atan2(line.b.y - line.a.y, line.b.x - line.a.x) * 180 / Math.PI);
+        if (deg > 90) deg = 180 - deg;
+        return deg;
+      }
+      function mid(line) { return { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 }; }
+      function pos(ev) {
+        var r = canvas.getBoundingClientRect();
+        var src = ev.touches ? ev.touches[0] : ev;
+        return {
+          x: (src.clientX - r.left) * canvas.width / r.width,
+          y: (src.clientY - r.top) * canvas.height / r.height
+        };
+      }
+      function drawFace(s) {
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(s / 2 - 8, s / 2 - 4, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s / 2 + 8, s / 2 - 4, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(s / 2, s / 2 + 8, 10, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      }
+      function drawBase() {
+        var s = canvas.width;
+        var p = puzzle();
+        var pad = Math.round(s * 0.12);
+        ctx.clearRect(0, 0, s, s);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, s, s);
+        ctx.fillStyle = p.color;
+        if (p.kind === "square") {
+          ctx.fillRect(pad, pad, s - pad * 2, s - pad * 2);
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+          ctx.strokeRect(pad + 8, pad + 8, s - pad * 2 - 16, s - pad * 2 - 16);
+        } else if (p.kind === "triangle") {
+          ctx.beginPath();
+          ctx.moveTo(s / 2, pad);
+          ctx.lineTo(s - pad, s - pad);
+          ctx.lineTo(pad, s - pad);
+          ctx.closePath(); ctx.fill();
+        } else if (p.kind === "rect") {
+          ctx.fillRect(pad * 0.5, s * 0.3, s - pad, s * 0.4);
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+          ctx.strokeRect(pad * 0.5 + 8, s * 0.3 + 8, s - pad - 16, s * 0.4 - 16);
+        } else {
+          ctx.beginPath();
+          ctx.arc(s / 2, s / 2, s / 2 - pad, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(s / 2, s / 2, s / 2 - pad - 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        drawFace(s);
+        var all = state.drawing ? state.lines.concat([state.drawing]) : state.lines;
+        all.forEach(function (line) {
+          ctx.beginPath();
+          ctx.strokeStyle = "#2c3e50";
+          ctx.lineWidth = 4;
+          ctx.lineCap = "round";
+          ctx.moveTo(line.a.x, line.a.y);
+          ctx.lineTo(line.b.x, line.b.y);
+          ctx.stroke();
+        });
+      }
+      function piecesHtml(p, count) {
+        var c = p.color;
+        if (count === 2) {
+          if (p.kind === "square" || p.kind === "rect") {
+            if (p.mode === "vert") {
+              return '<svg width="40" height="90"><rect width="40" height="90" fill="' + c + '"/></svg>' +
+                '<svg width="40" height="90"><rect width="40" height="90" fill="' + c + '"/></svg>';
+            }
+            return '<svg width="90" height="36"><rect width="90" height="36" fill="' + c + '"/></svg>' +
+              '<svg width="90" height="36"><rect width="90" height="36" fill="' + c + '"/></svg>';
+          }
+          if (p.kind === "triangle") {
+            return '<svg width="70" height="36"><polygon points="35,0 68,36 2,36" fill="' + c + '"/></svg>' +
+              '<svg width="100" height="30"><polygon points="12,0 88,0 100,30 0,30" fill="' + c + '"/></svg>';
+          }
+          if (p.mode === "vert") {
+            return '<svg width="48" height="90"><path d="M48,0 A48,45 0 0,0 48,90 Z" fill="' + c + '"/></svg>' +
+              '<svg width="48" height="90"><path d="M0,0 A48,45 0 0,1 0,90 Z" fill="' + c + '"/></svg>';
+          }
+          return '<svg width="90" height="42"><path d="M0,42 Q45,-6 90,42 Z" fill="' + c + '"/></svg>' +
+            '<svg width="90" height="42"><path d="M0,0 Q45,48 90,0 Z" fill="' + c + '"/></svg>';
+        }
+        if (p.kind === "square") {
+          return '<svg width="90" height="48"><polygon points="0,0 90,0 70,48 0,48" fill="' + c + '"/></svg>' +
+            '<svg width="80" height="22"><polygon points="12,0 80,0 68,22 0,22" fill="' + c + '"/></svg>' +
+            '<svg width="48" height="40"><polygon points="48,40 0,40 48,0" fill="' + c + '"/></svg>';
+        }
+        if (p.kind === "triangle") {
+          return '<svg width="56" height="32"><polygon points="28,0 52,32 4,32" fill="' + c + '"/></svg>' +
+            '<svg width="90" height="32"><polygon points="16,0 74,0 90,32 0,32" fill="' + c + '"/></svg>' +
+            '<svg width="110" height="26"><polygon points="10,0 100,0 110,26 0,26" fill="' + c + '"/></svg>';
+        }
+        if (p.kind === "rect") {
+          return '<svg width="18" height="90"><rect width="18" height="90" fill="' + c + '"/></svg>' +
+            '<svg width="48" height="90"><rect width="48" height="90" fill="' + c + '"/></svg>' +
+            '<svg width="18" height="90"><rect width="18" height="90" fill="' + c + '"/></svg>';
+        }
+        return '<svg width="90" height="28"><path d="M0,28 Q45,-8 90,28 Z" fill="' + c + '"/></svg>' +
+          '<svg width="110" height="44"><rect x="0" y="0" width="110" height="44" rx="8" fill="' + c + '"/></svg>' +
+          '<svg width="90" height="28"><path d="M0,0 Q45,36 90,0 Z" fill="' + c + '"/></svg>';
+      }
+      function renderMeta() {
+        var p = puzzle();
+        var n = need();
+        var pieces = n + 1;
+        document.getElementById("lead").textContent = level().lead;
+        document.getElementById("q").textContent = String(state.i + 1);
+        document.getElementById("ok").textContent = String(state.correct);
+        document.getElementById("ask").textContent = "给" + p.name + "画出 " + n + " 条线";
+        document.getElementById("hint").textContent = "已画 " + state.lines.length + " / " + n + " 条线";
+        document.getElementById("piecesLabel").textContent = "要分成这样（" + pieces + " 块）";
+        var box = document.getElementById("pieces");
+        box.className = "pieces " + (p.kind === "rect" || (n === 1 && (p.mode === "vert" || p.kind === "square")) ? "rect" : "");
+        box.innerHTML = piecesHtml(p, pieces);
+        document.getElementById("next").style.display = state.i >= puzzles().length - 1 ? "none" : "";
+        drawBase();
+      }
+      function setLevel(id) {
+        state.levelId = id;
+        state.i = 0;
+        state.lines = [];
+        state.drawing = null;
+        state.correct = 0;
+        state.solved = puzzles().map(function () { return false; });
+        document.querySelectorAll("#levels .chip").forEach(function (el) {
+          el.classList.toggle("active", el.dataset.id === id);
+        });
+        setStatus(need() === 1
+          ? "对照右边两块，画一条线切开。"
+          : "对照右边三块，想一想线该怎么画。");
+        renderMeta();
+      }
+      function onDown(ev) {
+        ev.preventDefault();
+        if (state.lines.length >= need()) {
+          setStatus("已经画了 " + need() + " 条线，可点重画。", "bad");
+          return;
+        }
+        var pt = pos(ev);
+        state.drawing = { a: pt, b: pt };
+        if (ev.pointerId != null && canvas.setPointerCapture) canvas.setPointerCapture(ev.pointerId);
+        drawBase();
+      }
+      function onMove(ev) {
+        if (!state.drawing) return;
+        ev.preventDefault();
+        state.drawing.b = pos(ev);
+        drawBase();
+      }
+      function onUp(ev) {
+        if (!state.drawing) return;
+        ev.preventDefault();
+        var line = { a: state.drawing.a, b: pos(ev) };
+        state.drawing = null;
+        if (dist(line.a, line.b) >= 24) state.lines.push(line);
+        renderMeta();
+      }
+      canvas.addEventListener("pointerdown", onDown);
+      canvas.addEventListener("pointermove", onMove);
+      canvas.addEventListener("pointerup", onUp);
+      canvas.addEventListener("pointercancel", onUp);
+
+      document.getElementById("clear").onclick = function () {
+        state.lines = [];
+        state.drawing = null;
+        setStatus("重新画吧。");
+        renderMeta();
+      };
+      function modeOk(avg, mode) {
+        if (mode === "horiz") return avg < 28;
+        if (mode === "vert") return avg > 62;
+        return avg > 28 && avg < 62;
+      }
+      document.getElementById("check").onclick = function () {
+        var n = need();
+        var p = puzzle();
+        if (state.lines.length < n) {
+          setStatus("请画出 " + n + " 条线。", "bad");
+          return;
+        }
+        var ok = false;
+        if (n === 1) {
+          var avg1 = angleDeg(state.lines[0]);
+          ok = modeOk(avg1, p.mode);
+        } else {
+          var l1 = state.lines[0], l2 = state.lines[1];
+          if (dist(mid(l1), mid(l2)) < canvas.width * 0.12) {
+            setStatus("两条线离得太近啦。", "bad");
+            return;
+          }
+          if (Math.abs(angleDeg(l1) - angleDeg(l2)) >= 18) {
+            setStatus("这两条线要差不多平行。", "bad");
+            return;
+          }
+          var avg = (angleDeg(l1) + angleDeg(l2)) / 2;
+          ok = modeOk(avg, p.mode);
+        }
+        if (ok) {
+          if (!state.solved[state.i]) {
+            state.solved[state.i] = true;
+            state.correct += 1;
+          }
+          setStatus("分对啦！", "ok");
+          renderMeta();
+          if (state.i >= puzzles().length - 1) {
+            setStatus("全部完成！这次对了 " + state.correct + " / " + puzzles().length + " 题。", "ok");
+          }
+        } else {
+          setStatus(p.hint, "bad");
+        }
+      };
+      document.getElementById("next").onclick = function () {
+        if (state.i >= puzzles().length - 1) return;
+        state.i += 1;
+        state.lines = [];
+        state.drawing = null;
+        setStatus(need() === 1
+          ? "对照右边两块，画一条线切开。"
+          : "对照右边三块，想一想线该怎么画。");
+        renderMeta();
+      };
+
+      var levelRow = document.getElementById("levels");
+      LEVELS.forEach(function (item) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.dataset.id = item.id;
+        btn.textContent = item.label;
+        btn.onclick = function () { setLevel(item.id); };
+        levelRow.appendChild(btn);
+      });
+      setLevel("easy");
+    })();
+  </script>
+</body>
+</html>
