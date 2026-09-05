@@ -29,6 +29,7 @@ python -m http.server 8080
 | [排排队](order.html) | `order.html` | 车队号码从小到大；1～10 / 10～20 / 自定义 |
 | [找规律](pattern.html) | `pattern.html` | 看车队颜色规律，选出下一辆 |
 | [凑一凑](add.html) | `add.html` | 两队车合起来；10 / 20 / 自定义合值 |
+| [红绿灯过马路](crossroad.html) | `crossroad.html` | 看灯过马路：绿灯走，黄灯 / 红灯停 |
 
 ## 6 岁以上 · 观察与运算
 
@@ -39,6 +40,14 @@ python -m http.server 8080
 | [我爱玩拼图](puzzle.html) | `puzzle.html` | 看完整图形，从 ①—④ 里找出能拼上的半块 |
 | [分割图形](divide.html) | `divide.html` | 简单画 1 条线分成 2 块；挑战画 2 条线分成 3 块 |
 | [小小设计师](designer.html) | `designer.html` | 给毛衣正面和背面画上有规律的花纹 |
+
+### 红绿灯过马路
+
+看行人灯再过斑马线。
+
+- **3 岁：** 绿 → 黄 → 红；黄灯较久，节奏慢。
+- **4～5 岁：** 同样有黄灯，换灯更快，车也更快。
+- 黄灯 / 红灯还在马路中间走，会判失败并重来。
 
 ### 分苹果
 

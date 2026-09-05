@@ -126,7 +126,7 @@
 | `count.html` | 数一数（区间模板参考） |
 | `add.html` | 凑一凑（合值模板参考） |
 | `compare.html` / `order.html` | 比多少 / 排序 |
-| `size.html` / `shape.html` / `sort.html` / `pattern.html` | 大小 / 形状 / 分类 / 规律 |
+| `size.html` / `shape.html` / `sort.html` / `pattern.html` / `crossroad.html` | 大小 / 形状 / 分类 / 规律 / 红绿灯过马路 |
 | `apple-share.html` / `find-house.html` | 大龄：canvas/拖线，主题装饰仍要齐 |
 | `puzzle.html` / `divide.html` / `designer.html` | 大龄观察：半块拼图 / 画线分割 / 毛衣花纹 |
 
