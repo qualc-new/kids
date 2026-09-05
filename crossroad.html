@@ -254,9 +254,12 @@
       right: 66px;
       top: 12%;
       z-index: 4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 15px;
       font-weight: 800;
-      padding: 6px 12px;
+      padding: 6px 10px 6px 12px;
       border-radius: 999px;
       background: #fff;
       border: 2px solid var(--line);
@@ -266,6 +269,21 @@
     .light-label.red { border-color: #e53935; color: #c62828; }
     .light-label.yellow { border-color: #f0a202; color: #b7791f; }
     .light-label.green { border-color: #2bb673; color: #187a4c; }
+    .light-count {
+      min-width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      background: currentColor;
+      color: #fff;
+      line-height: 1;
+    }
+    .light-label.red .light-count { background: #e53935; }
+    .light-label.yellow .light-count { background: #f0a202; }
+    .light-label.green .light-count { background: #2bb673; }
 
     .kid {
       position: absolute;
@@ -354,7 +372,10 @@
           <div class="cars-lane" id="cars"></div>
         </div>
         <div class="sidewalk near"></div>
-        <div class="light-label" id="lightLabel">红灯 · 停下</div>
+        <div class="light-label red" id="lightLabel">
+          <span id="lightText">红灯 · 停下</span>
+          <span class="light-count" id="lightCount" aria-live="polite">0</span>
+        </div>
         <div class="pole" aria-hidden="true">
           <div class="signal">
             <div class="lamp" id="lampRed"></div>
@@ -424,6 +445,7 @@
         lastTs: 0,
         spawnAt: 0,
         redStreak: 0,
+        shownSec: -1,
       };
 
       const el = {
@@ -433,6 +455,8 @@
         status: document.getElementById("status"),
         ask: document.getElementById("ask"),
         lightLabel: document.getElementById("lightLabel"),
+        lightText: document.getElementById("lightText"),
+        lightCount: document.getElementById("lightCount"),
         lampRed: document.getElementById("lampRed"),
         lampYellow: document.getElementById("lampYellow"),
         lampGreen: document.getElementById("lampGreen"),
@@ -490,9 +514,20 @@
         el.lampYellow.className = "lamp" + (state.light === "yellow" ? " on-yellow" : "");
         el.lampGreen.className = "lamp" + (state.light === "green" ? " on-green" : "");
         el.lightLabel.className = "light-label " + state.light;
-        if (state.light === "red") el.lightLabel.textContent = "红灯 · 停下";
-        else if (state.light === "yellow") el.lightLabel.textContent = "黄灯 · 停下";
-        else el.lightLabel.textContent = "绿灯 · 可以走";
+        if (state.light === "red") el.lightText.textContent = "红灯 · 停下";
+        else if (state.light === "yellow") el.lightText.textContent = "黄灯 · 停下";
+        else el.lightText.textContent = "绿灯 · 可以走";
+        state.shownSec = -1;
+      }
+
+      function updateCountdown(now) {
+        const left = Math.max(0, state.lightUntil - now);
+        const sec = Math.max(1, Math.ceil(left / 1000));
+        // 即将切灯时显示 1，切完后由下一灯刷新
+        const show = left <= 0 ? 1 : sec;
+        if (show === state.shownSec) return;
+        state.shownSec = show;
+        el.lightCount.textContent = String(show);
       }
 
       function setLight(next, now) {
@@ -506,6 +541,7 @@
         if (next === "red") state.redStreak += 1;
         else state.redStreak = 0;
         syncLightUi();
+        updateCountdown(now);
         if (state.phase === "play" && !state.lock) {
           if (next === "green") setStatus("绿灯了！按住按钮走过去。");
           else if (next === "yellow") setStatus("黄灯了，快停在斑马线上或退回人行道。");
@@ -637,6 +673,7 @@
         const c = cfg();
 
         if (state.phase === "play" && ts >= state.lightUntil) nextLight(ts);
+        updateCountdown(ts);
 
         const carsRun = state.light === "red" || state.light === "yellow";
         if (state.phase === "play" && carsRun && ts >= state.spawnAt) spawnCar(ts);
