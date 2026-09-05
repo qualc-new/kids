@@ -200,90 +200,123 @@
     }
     .pole {
       position: absolute;
-      right: 14px;
-      top: 10%;
-      width: 44px;
+      right: 12px;
+      top: 6%;
+      width: 78px;
       z-index: 4;
     }
     .pole-post {
-      width: 10px;
-      height: 54px;
+      width: 14px;
+      height: 64px;
       margin: 0 auto;
-      background: #64748b;
-      border-radius: 4px;
+      background: linear-gradient(90deg, #475569, #94a3b8 45%, #334155);
+      border-radius: 5px;
+      box-shadow: 2px 0 0 #1e293b;
     }
     .signal {
-      width: 44px;
-      padding: 8px 6px;
-      background: #1e293b;
-      border-radius: 12px;
-      border: 3px solid #334155;
+      width: 78px;
+      padding: 12px 10px;
+      background: linear-gradient(160deg, #475569 0%, #1e293b 40%, #0f172a 100%);
+      border-radius: 18px;
+      border: 4px solid #334155;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
       align-items: center;
-      box-shadow: 0 4px 0 #0f172a;
+      box-shadow:
+        0 8px 0 #0f172a,
+        inset 0 2px 0 rgba(255,255,255,.18),
+        inset 0 -3px 6px rgba(0,0,0,.35);
     }
     .lamp {
-      width: 26px;
-      height: 26px;
+      position: relative;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: #334155;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,.35);
-      transition: background 0.15s ease, box-shadow 0.15s ease;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 32% 28%, #64748b, #334155 55%, #1e293b 100%);
+      border: 3px solid #0f172a;
+      box-shadow:
+        inset 0 -4px 8px rgba(0,0,0,.55),
+        inset 0 3px 5px rgba(255,255,255,.12),
+        0 3px 0 #020617;
+      transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+    .lamp-num {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.45);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .lamp.on-red,
+    .lamp.on-yellow,
+    .lamp.on-green {
+      border-color: rgba(15, 23, 42, 0.55);
+    }
+    .lamp.on-red .lamp-num,
+    .lamp.on-yellow .lamp-num,
+    .lamp.on-green .lamp-num {
+      opacity: 1;
     }
     .lamp.on-red {
-      background: #e53935;
-      box-shadow: 0 0 12px rgba(229, 57, 53, 0.75);
+      background:
+        radial-gradient(circle at 30% 26%, #ff8a80 0%, #ef5350 38%, #c62828 72%, #7f1d1d 100%);
+      box-shadow:
+        inset 0 -5px 10px rgba(0,0,0,.4),
+        inset 0 4px 6px rgba(255,255,255,.35),
+        0 0 22px rgba(229, 57, 53, 0.9),
+        0 4px 0 #7f1d1d;
     }
     .lamp.on-yellow {
-      background: #ffc107;
-      box-shadow: 0 0 12px rgba(255, 193, 7, 0.75);
-      animation: yellow-blink 0.55s ease-in-out infinite;
+      background:
+        radial-gradient(circle at 30% 26%, #fff59d 0%, #ffd54f 40%, #f9a825 75%, #f57f17 100%);
+      box-shadow:
+        inset 0 -5px 10px rgba(0,0,0,.28),
+        inset 0 4px 6px rgba(255,255,255,.45),
+        0 0 22px rgba(255, 193, 7, 0.95),
+        0 4px 0 #e65100;
+      animation: yellow-pulse 0.55s ease-in-out infinite;
     }
-    @keyframes yellow-blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
+    .lamp.on-yellow .lamp-num {
+      color: #4e342e;
+      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+    }
+    @keyframes yellow-pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(0.72); }
     }
     .lamp.on-green {
-      background: #2bb673;
-      box-shadow: 0 0 12px rgba(43, 182, 115, 0.75);
+      background:
+        radial-gradient(circle at 30% 26%, #b9f6ca 0%, #69f0ae 35%, #2bb673 70%, #1b5e20 100%);
+      box-shadow:
+        inset 0 -5px 10px rgba(0,0,0,.35),
+        inset 0 4px 6px rgba(255,255,255,.4),
+        0 0 22px rgba(43, 182, 115, 0.9),
+        0 4px 0 #14532d;
     }
     .light-label {
       position: absolute;
-      right: 66px;
-      top: 12%;
+      right: 98px;
+      top: 10%;
       z-index: 4;
-      display: flex;
-      align-items: center;
-      gap: 8px;
       font-size: 15px;
       font-weight: 800;
-      padding: 6px 10px 6px 12px;
+      padding: 8px 14px;
       border-radius: 999px;
       background: #fff;
       border: 2px solid var(--line);
       color: var(--ink);
       white-space: nowrap;
+      box-shadow: 0 3px 0 #d4e4f7;
     }
     .light-label.red { border-color: #e53935; color: #c62828; }
     .light-label.yellow { border-color: #f0a202; color: #b7791f; }
     .light-label.green { border-color: #2bb673; color: #187a4c; }
-    .light-count {
-      min-width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 18px;
-      font-weight: 800;
-      background: currentColor;
-      color: #fff;
-      line-height: 1;
-    }
-    .light-label.red .light-count { background: #e53935; }
-    .light-label.yellow .light-count { background: #f0a202; }
-    .light-label.green .light-count { background: #2bb673; }
 
     .kid {
       position: absolute;
@@ -374,15 +407,14 @@
         <div class="sidewalk near"></div>
         <div class="light-label red" id="lightLabel">
           <span id="lightText">红灯 · 停下</span>
-          <span class="light-count" id="lightCount" aria-live="polite">0</span>
         </div>
-        <div class="pole" aria-hidden="true">
-          <div class="signal">
-            <div class="lamp" id="lampRed"></div>
-            <div class="lamp" id="lampYellow"></div>
-            <div class="lamp" id="lampGreen"></div>
+        <div class="pole">
+          <div class="signal" aria-hidden="true">
+            <div class="lamp" id="lampRed"><span class="lamp-num" id="secRed"></span></div>
+            <div class="lamp" id="lampYellow"><span class="lamp-num" id="secYellow"></span></div>
+            <div class="lamp" id="lampGreen"><span class="lamp-num" id="secGreen"></span></div>
           </div>
-          <div class="pole-post"></div>
+          <div class="pole-post" aria-hidden="true"></div>
         </div>
         <div class="kid" id="kid" aria-label="小朋友">
           <svg viewBox="0 0 48 56" aria-hidden="true">
@@ -456,10 +488,12 @@
         ask: document.getElementById("ask"),
         lightLabel: document.getElementById("lightLabel"),
         lightText: document.getElementById("lightText"),
-        lightCount: document.getElementById("lightCount"),
         lampRed: document.getElementById("lampRed"),
         lampYellow: document.getElementById("lampYellow"),
         lampGreen: document.getElementById("lampGreen"),
+        secRed: document.getElementById("secRed"),
+        secYellow: document.getElementById("secYellow"),
+        secGreen: document.getElementById("secGreen"),
         ok: document.getElementById("ok"),
         try: document.getElementById("try"),
         scene: document.getElementById("scene"),
@@ -517,17 +551,29 @@
         if (state.light === "red") el.lightText.textContent = "红灯 · 停下";
         else if (state.light === "yellow") el.lightText.textContent = "黄灯 · 停下";
         else el.lightText.textContent = "绿灯 · 可以走";
+        el.secRed.textContent = "";
+        el.secYellow.textContent = "";
+        el.secGreen.textContent = "";
         state.shownSec = -1;
+      }
+
+      function activeSecEl() {
+        if (state.light === "red") return el.secRed;
+        if (state.light === "yellow") return el.secYellow;
+        return el.secGreen;
       }
 
       function updateCountdown(now) {
         const left = Math.max(0, state.lightUntil - now);
         const sec = Math.max(1, Math.ceil(left / 1000));
-        // 即将切灯时显示 1，切完后由下一灯刷新
         const show = left <= 0 ? 1 : sec;
         if (show === state.shownSec) return;
         state.shownSec = show;
-        el.lightCount.textContent = String(show);
+        const node = activeSecEl();
+        el.secRed.textContent = "";
+        el.secYellow.textContent = "";
+        el.secGreen.textContent = "";
+        node.textContent = String(show);
       }
 
       function setLight(next, now) {
